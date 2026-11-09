@@ -6,7 +6,7 @@
         Title="NotAirplay" Width="960" Height="720" MinWidth="620" MinHeight="520"
         Background="#0B0C10" Foreground="#F1F2F6" FontFamily="Segoe UI Variable Text, Segoe UI, -apple-system, sans-serif"
         UseLayoutRounding="True" SnapsToDevicePixels="True" WindowStartupLocation="CenterScreen" WindowStyle="None"
-        ResizeMode="CanResize" PreviewKeyDown="Window_KeyDown">
+        ResizeMode="CanResize" PreviewKeyDown="Window_KeyDown" Icon="assets/app.ico">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="56" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="12" />
     </shell:WindowChrome.WindowChrome>
@@ -146,12 +146,9 @@
             <!-- Title Bar -->
             <Grid x:Name="TitleBar" Margin="16,0,12,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Brand Icon: Minimal AirPlay monitor glyph -->
-                    <Border Width="28" Height="28" Background="{StaticResource SurfaceCard}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="8" Margin="0,0,10,0">
-                        <Canvas Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Rectangle Width="14" Height="9" Canvas.Left="1" Canvas.Top="1" RadiusX="2" RadiusY="2" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2" />
-                            <Path Data="M 5,14 L 8,10 L 11,14 Z" Fill="{StaticResource TextPrimary}" />
-                        </Canvas>
+                    <!-- Brand Icon: NotAirplay App Logo -->
+                    <Border Width="28" Height="28" Background="{StaticResource SurfaceCard}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="8" Margin="0,0,10,0" ClipToBounds="True">
+                        <Image Source="assets/logo.png" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
                     </Border>
                     <TextBlock Text="NotAirplay" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" />
                 </StackPanel>

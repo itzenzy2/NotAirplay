@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="NotAirplay" width="128" height="128" />
+</p>
+
 # NotAirplay
 
 A lightweight, low-latency AirPlay screen mirroring and audio receiver for Windows 10 and 11. Connects directly to your iPhone or iPad over your local Wi-Fi or Ethernet network — no companion iOS apps, Bluetooth pairing, or cloud relays required.
