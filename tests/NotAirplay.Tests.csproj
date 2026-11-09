@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework><OutputType>Exe</OutputType>
+    <UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks><PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NotAirplay.csproj" />
+    <None Include="../bin/Release/net8.0-windows/notairplay-key.exe" Link="notairplay-key.exe" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../bin/Release/net8.0-windows/notairplay-video.dll" Link="notairplay-video.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

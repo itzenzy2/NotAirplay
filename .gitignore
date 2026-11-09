@@ -1,0 +1,27 @@
+# Build and compilation outputs
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+native/*.o
+
+# IDE and editor files
+.vs/
+.codex/
+.idea/
+*.user
+*.suo
+
+# Python caches and temporary scripts
+__pycache__/
+*.pyc
+scratch_*
+
+# System and temporary logs
+NVIDIA Corporation/
+*.log
+*.tmp
+*.zip

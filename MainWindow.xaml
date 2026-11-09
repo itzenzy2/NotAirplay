@@ -1,0 +1,151 @@
+<Window x:Class="NotAirplay.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:NotAirplay"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="NotAirplay" Width="960" Height="720" MinWidth="620" MinHeight="520"
+        Background="#101012" Foreground="#F4F4F5" FontFamily="Segoe UI Variable Text, Segoe UI"
+        UseLayoutRounding="True" WindowStartupLocation="CenterScreen" WindowStyle="None"
+        ResizeMode="CanResize" PreviewKeyDown="Window_KeyDown">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="62" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="12" />
+    </shell:WindowChrome.WindowChrome>
+    <Window.Resources>
+        <SolidColorBrush x:Key="Muted" Color="#929298" />
+        <Style x:Key="ButtonBase" TargetType="Button">
+            <Setter Property="Foreground" Value="#E8E8EC" />
+            <Setter Property="Background" Value="#242427" />
+            <Setter Property="BorderBrush" Value="#35353A" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value><ControlTemplate TargetType="Button">
+                    <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" CornerRadius="9" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.75" /></Trigger>
+                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.55" /></Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="#9BBDF6" /></Trigger>
+                        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.35" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate></Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="QuietButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+            <Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="#9E9EA6" /><Setter Property="Padding" Value="10,8" />
+        </Style>
+        <Style x:Key="CaptionButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+            <Setter Property="Width" Value="38" /><Setter Property="Height" Value="32" /><Setter Property="Padding" Value="0" />
+            <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True" />
+        </Style>
+    </Window.Resources>
+    <Border BorderBrush="#303034" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions><RowDefinition x:Name="HeaderRow" Height="62" /><RowDefinition Height="*" /><RowDefinition x:Name="FooterRow" Height="58" /></Grid.RowDefinitions>
+            <Grid x:Name="TitleBar" Margin="24,0,12,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Canvas Width="24" Height="24" Margin="0,0,11,0">
+                        <Rectangle Width="16" Height="12" Canvas.Top="3" RadiusX="3" RadiusY="3" Stroke="#D9D9DF" StrokeThickness="1.5" />
+                        <Rectangle Width="16" Height="12" Canvas.Top="9" Canvas.Left="7" RadiusX="3" RadiusY="3" Stroke="#D9D9DF" Fill="#101012" StrokeThickness="1.5" />
+                    </Canvas>
+                    <TextBlock Text="NotAirplay" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,23,0">
+                        <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="#717178" VerticalAlignment="Center" />
+                        <TextBlock x:Name="StatusLabel" Text="Offline" Foreground="{StaticResource Muted}" FontSize="12" Margin="7,0,0,0" AutomationProperties.LiveSetting="Polite" />
+                    </StackPanel>
+                    <Button Style="{StaticResource CaptionButton}" Click="Minimize_Click" ToolTip="Minimize" AutomationProperties.Name="Minimize"><Path Data="M 0,5 H 10" Stroke="#B0B0B8" StrokeThickness="1" /></Button>
+                    <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" Click="Maximize_Click" ToolTip="Maximize" AutomationProperties.Name="Maximize"><Path x:Name="MaximizeGlyph" Data="M 0,0 H 10 V 10 H 0 Z" Stroke="#B0B0B8" StrokeThickness="1" /></Button>
+                    <Button Style="{StaticResource CaptionButton}" Click="Close_Click" ToolTip="Close" AutomationProperties.Name="Close"><Path Data="M 0,0 L 10,10 M 10,0 L 0,10" Stroke="#B0B0B8" StrokeThickness="1.2" /></Button>
+                </StackPanel>
+            </Grid>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Grid x:Name="Stage" Margin="18,0" Background="#101012" MouseDown="Stage_MouseDown">
+                    <Grid x:Name="VideoLayer" Visibility="Hidden" Background="#080809" ClipToBounds="True">
+                        <local:VideoSurface x:Name="NativeSurface" Visibility="Hidden" />
+                        <Image x:Name="MirrorImage" Visibility="Collapsed" Stretch="Uniform" RenderTransformOrigin="0.5,0.5" RenderOptions.BitmapScalingMode="HighQuality" />
+                    </Grid>
+                    <Grid x:Name="AudioOnlyPanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Viewbox Width="80" Height="80" HorizontalAlignment="Center" Margin="0,0,0,24">
+                                <Canvas Width="72" Height="72">
+                                    <Ellipse Width="72" Height="72" Fill="#19191D" Stroke="#2D2D35" StrokeThickness="1.5" />
+                                    <Path Data="M 23,28 H 28 L 36,21 V 51 L 28,44 H 23 Z" Fill="#E8E8ED" />
+                                    <Path Data="M 42,27 C 45,31 45,41 42,45" Stroke="#81C7A0" StrokeThickness="2.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                    <Path Data="M 47,21 C 52,28 52,44 47,51" Stroke="#81C7A0" StrokeThickness="2.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                </Canvas>
+                            </Viewbox>
+                            <TextBlock x:Name="AudioDeviceText" Text="iPhone" FontSize="20" FontWeight="SemiBold" TextAlignment="Center" Foreground="#F4F4F5" />
+                            <TextBlock x:Name="AudioTrackText" Text="AirPlay Audio" FontSize="14" Foreground="{StaticResource Muted}" TextAlignment="Center" Margin="0,6,0,0" MaxWidth="480" TextWrapping="Wrap" />
+                            <TextBlock x:Name="AudioVolumeText" Text="" FontSize="12" Foreground="#81C7A0" TextAlignment="Center" Margin="0,10,0,0" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid x:Name="ReceiverHome" MaxWidth="560" Margin="24,8">
+                        <StackPanel VerticalAlignment="Center">
+                            <Viewbox Width="182" Height="132" Margin="0,0,0,28" HorizontalAlignment="Center" Stretch="Uniform">
+                                <Canvas Width="182" Height="132">
+                                    <Rectangle Canvas.Left="7" Canvas.Top="8" Width="141" Height="94" RadiusX="12" RadiusY="12" Stroke="#49494F" StrokeThickness="1.4" Fill="#19191C" />
+                                    <Rectangle Canvas.Left="14" Canvas.Top="15" Width="127" Height="80" RadiusX="7" RadiusY="7" Fill="#151518" />
+                                    <Path Data="M 63,103 V 115 H 91 V 103 M 45,116 H 109" Stroke="#49494F" StrokeThickness="1.4" StrokeLineJoin="Round" />
+                                    <Rectangle Canvas.Left="121" Canvas.Top="46" Width="49" Height="81" RadiusX="10" RadiusY="10" Fill="#202024" Stroke="#86868E" StrokeThickness="1.5" />
+                                    <Rectangle Canvas.Left="137" Canvas.Top="52" Width="17" Height="4" RadiusX="2" RadiusY="2" Fill="#08080A" />
+                                    <Path Data="M 139,120 H 152" Stroke="#72727B" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                    <Path Data="M 66,56 H 88 V 72 H 66 Z M 74,64 H 96 V 80 H 74 Z" Stroke="#9CA4B4" StrokeThickness="1.4" Fill="#151518" StrokeLineJoin="Round" />
+                                </Canvas>
+                            </Viewbox>
+                            <TextBlock x:Name="HeroTitle" Text="Ready for your iPhone." FontSize="32" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HeroDetail" Text="Open Control Center on your iPhone to connect." FontSize="14" Foreground="{StaticResource Muted}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,10,0,0" LineHeight="22" />
+                            <Button x:Name="DiscoveryButton" Visibility="Collapsed" Content="Start receiver" Style="{StaticResource ButtonBase}" Background="#E8E8ED" Foreground="#171719" BorderBrush="#E8E8ED" Padding="27,11" HorizontalAlignment="Center" Margin="0,26,0,0" Click="Discovery_Click" />
+                            <StackPanel x:Name="ConnectInstructions" Visibility="Visible" Margin="0,27,0,0" HorizontalAlignment="Center">
+                                <TextBlock Text="ON YOUR IPHONE" FontSize="10" FontWeight="SemiBold" Foreground="#707078" TextAlignment="Center" Margin="0,0,0,13" />
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="Control Center" Foreground="#B5B5BC" FontSize="12" />
+                                    <TextBlock Text="  ›  " Foreground="#5E5E67" />
+                                    <TextBlock Text="Screen Mirroring" Foreground="#B5B5BC" FontSize="12" />
+                                    <TextBlock Text="  ›  " Foreground="#5E5E67" />
+                                    <TextBlock Text="NotAirplay" Foreground="#ECECF0" FontSize="12" FontWeight="Medium" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+                <Border x:Name="DiagnosticsPanel" Grid.Column="1" Width="292" Visibility="Collapsed" Background="#17171A" BorderBrush="#29292E" BorderThickness="1,0,0,0" Padding="20">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Session details" FontSize="17" FontWeight="SemiBold" />
+                            <TextBlock x:Name="StatsDetail" Text="No active session" FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,14,0,0" LineHeight="21" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Margin="0,18,0,10">
+                            <Button x:Name="CompatibilityButton" Content="Compatibility mode: off" Style="{StaticResource ButtonBase}" FontSize="12" Click="Compatibility_Click" />
+                            <TextBlock Text="For playback issues. Applies to your next connection." Foreground="#797981" FontSize="11" TextWrapping="Wrap" Margin="0,7,0,18" />
+                            <TextBlock Text="ACTIVITY" FontSize="10" FontWeight="SemiBold" Foreground="#707078" />
+                        </StackPanel>
+                        <TextBox x:Name="DiagnosticLog" Grid.Row="2" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="Transparent" Foreground="#9F9FA9" BorderThickness="0" FontFamily="Consolas" FontSize="11" Padding="0" />
+                        <Button Grid.Row="3" Content="Copy diagnostics" Style="{StaticResource ButtonBase}" Click="CopyDiagnostics_Click" Margin="0,14,0,0" />
+                    </Grid>
+                </Border>
+            </Grid>
+            <Grid x:Name="Footer" Grid.Row="2" Margin="26,0,18,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse x:Name="LiveDot" Width="5" Height="5" Fill="#63636C" Margin="0,0,8,0" />
+                    <TextBlock x:Name="StatusDetail" Text="Same network. No cables." Foreground="#797981" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="330" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="StopVideoButton" Content="Stop mirroring" Visibility="Collapsed" Style="{StaticResource QuietButton}" Click="StopVideo_Click" />
+                    <Button x:Name="FullscreenButton" Visibility="Collapsed" Style="{StaticResource QuietButton}" Click="Fullscreen_Click" ToolTip="Full screen (F11)" AutomationProperties.Name="Full screen"><Path Data="M 0,5 V 0 H 5 M 9,0 H 14 V 5 M 14,9 V 14 H 9 M 5,14 H 0 V 9" Stroke="#9E9EA6" StrokeThickness="1.2" /></Button>
+                    <Button x:Name="PinButton" Style="{StaticResource QuietButton}" Click="Pin_Click" ToolTip="Keep on top" AutomationProperties.Name="Keep on top"><Path Data="M 4,0 H 10 L 9,6 L 12,9 H 2 L 5,6 Z M 7,9 V 15" Stroke="#9E9EA6" StrokeThickness="1.2" /></Button>
+                    <Button Style="{StaticResource QuietButton}" Content="Details" Click="Details_Click" AutomationProperties.Name="Session details" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
