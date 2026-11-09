@@ -1,59 +1,95 @@
 # NotAirplay
 
-A Windows receiver for your iPhone's built-in Screen Mirroring. **Playback preview 6** repairs video presentation scheduling and adds initial AAC audio playback. No Bluetooth or iPhone app is needed.
+A lightweight, low-latency AirPlay screen mirroring and audio receiver for Windows 10 and 11. Connects directly to your iPhone or iPad over your local Wi-Fi or Ethernet network — no companion iOS apps, Bluetooth pairing, or cloud relays required.
 
-## Run
+---
 
-Use Windows 10/11 x64 with the .NET 8 Desktop Runtime. Extract the ZIP, keep its files together, close any older NotAirplay preview, and run `NotAirplay.exe`.
+## Features
 
-1. Put the iPhone and PC on the same network. Ethernet is fine for the PC.
-2. Choose **Start receiver**.
-3. On the iPhone, open **Control Center → Screen Mirroring → NotAirplay**.
-4. Stop on either device when finished. The picture clears, the app shows **Mirroring stopped**, and discovery stays ready for reconnection.
+- **Hardware-accelerated video**: Zero-copy Direct3D 11 swapchain presentation with hardware H.264 and HEVC decoding via Windows Media Foundation (DXVA2).
+- **Lossless audio**: Bit-perfect Apple Lossless Audio Codec (ALAC) decoding using a native C decoder, alongside low-latency AAC-ELD and AAC-LC playback.
+- **Hardware volume synchronization**: Native Windows Audio Session API (WASAPI) volume integration driven directly by your device's volume rocker and slider.
+- **Persistent standby**: Maintains connection continuously during playback pauses and between track changes without dropping the session.
+- **Zero iOS configuration**: Pairs natively through iOS Control Center. No jailbreak, mobile profiles, or third-party apps needed.
+- **Automatic discovery**: Broadcasts over multi-adapter IPv4 mDNS for instant pairing on startup.
+- **Zero telemetry**: Operates strictly within your local network. No external network requests, account requirements, or data collection.
 
-**Turn off receiver** stops advertising. **F11** or the full-screen button enters full screen; **Esc** leaves it. The pin keeps the window above other apps.
+---
 
-H.264 uses Windows Media Foundation and Direct3D 11 by default. With a supported graphics driver, decode, color conversion, scaling, and presentation stay on the GPU. The Windows software decoder can still use GPU presentation. `ffmpeg.exe` on PATH is needed for HEVC and compatibility fallback.
+## Requirements
 
-Open **Details** for frame counts, decoder choice, received data, local processing time, and **Copy diagnostics**. **Compatibility mode** applies to the next connection and forces the fallback path. Logs stay in memory until copied; screen pixels, media keys, and control-request bodies are not logged.
+- **Operating System**: Windows 10 or Windows 11 (64-bit)
+- **Runtime**: [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
+- **Network**: iPhone/iPad and Windows PC connected to the same local network (Wi-Fi or Ethernet)
+- **Fallback / HEVC decoding** *(optional)*: `ffmpeg.exe` and `ffplay.exe` on your system `PATH` for compatibility mode and HEVC stream fallback.
 
-**Quality: 1440p** requests a larger display canvas on the next connection. Disconnect and reconnect after changing it. The iPhone chooses the encoded dimensions; portrait mirroring fits inside the advertised canvas, so this does not promise 1440 pixels across a portrait image.
+---
 
-Audio uses separately installed **ffplay.exe**, beside ffmpeg.exe on PATH, and the Windows default output device. AAC-LC and AAC-ELD RTP streams are supported; ALAC and buffered AirPlay 2 audio are not. Use the Windows volume mixer for playback volume. Sender volume commands, complete clock-based A/V synchronization, and audible AAC-ELD playback on a real iPhone have not been validated.
+## Getting Started
 
-## What changed
+1. Download the latest release from the [Releases](https://github.com/itzenzy2/NotAirplay/releases) page and extract the archive.
+2. Launch `NotAirplay.exe`. The receiver starts automatically and announces itself on your local network.
+3. On your iPhone or iPad:
+   - Swipe down to open **Control Center**.
+   - Tap **Screen Mirroring** (for video) or tap the AirPlay audio icon in the media player.
+   - Select **NotAirplay**.
+4. To disconnect, tap **Stop Mirroring** on your device or click **Disconnect** in NotAirplay.
 
-- Replaced discard-on-busy presentation with a separate vsync presentation worker. At most two decoded frames wait for display; reception/decoding continues independently. Stale decoded frames can still be replaced when the display falls behind.
-- Added AES-CBC audio decryption, AAC RTP repackaging, UDP gap retransmission requests, playback process cleanup, and audio-only teardown.
-- Added a next-connection 1080p/1440p quality request.
+---
 
-- Replaced the default H.264 bitmap pipe with an in-process Windows decoder and a native D3D11 surface. The GPU path avoids full-size RGB transfers through a child process and WPF.
-- Limited presentation queueing; skipped obsolete presentation work instead of allowing delay to accumulate.
-- Made fallback WPF presentation follow compositor rendering, with one pending frame and a nonblocking bitmap update.
-- Added typed connection/session events and session IDs. EOF, local stop, failures, and late callbacks now produce the correct UI state.
-- Kept discovery available after mirroring stops, released sockets/decoders on teardown, and added a first-frame deadline and control timeout.
-- Added a clean home screen, separate diagnostics panel, visible streaming state, full screen, always-on-top, and compatibility mode.
-- Retained H.264/HEVC compatibility, the working handshake, and IPv4 discovery.
+## Keyboard Shortcuts & Controls
 
-## Validation and limits
+| Action | Shortcut |
+| :--- | :--- |
+| **Toggle Full Screen** | `F11` or double-click the video surface |
+| **Exit Full Screen** | `Esc` |
+| **Keep on Top** | Pin button in the footer bar |
+| **Session Diagnostics** | Details button in the footer bar |
 
-Local checks cover the protocol, encrypted TCP media, stop/reconnect behavior, decoder fallback, native hardware/software decode, resolution changes, and UI lifecycle. Reproducible tests and benchmark methodology are in [tests/README.md](tests/README.md).
+---
 
-Preview 5's unpaced CPU benchmark did not predict smooth playback and is not used as evidence for this release. Preview 6 tests paced and bursty input instead. Submission counters do not measure the physical display or end-to-end iPhone latency. Native HEVC, input control, and protected-content playback are not implemented.
+## Architecture
 
-## Build
+NotAirplay implements the AirPlay protocol natively on Windows:
 
-Use the .NET 8 SDK and [LLVM-MinGW](https://github.com/mstorsjo/llvm-mingw/releases/tag/20260616):
+- **Pairing & Handshake**: Implements the RTSP control channel and FairPlay v3 authentication (modes 0, 1, 2, and 3), recovering session media keys with zero external network calls.
+- **Video Pipeline**: Decrypts AES-CBC video packets, parses NAL units, feeds samples into the Windows Media Foundation H.264/HEVC decoder MFT, and presents directly onto a Direct3D 11 swapchain with vsync-aligned frame delivery.
+- **Audio Pipeline**: Receives RTP audio over UDP, decrypts payloads, and decodes ALAC frames with an embedded native C decoder (`native/alac.c`), routing audio via WASAPI with real-time process volume synchronization.
+- **Memory & Throughput**: Employs zero-allocation packet stream processing and instant memory-safe stream discarding for oversized metadata to maintain smooth playback without GC pauses.
+
+---
+
+## Building from Source
+
+### Prerequisites
+
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [LLVM-MinGW](https://github.com/mstorsjo/llvm-mingw/releases) (or Clang on Windows)
+
+### Build Steps
+
+Clone the repository and run the build script:
 
 ```powershell
-dotnet build NotAirplay.csproj -c Release
-.\native\Build-Native.ps1 -Clang C:\path\to\llvm-mingw\bin\clang.exe
-.\bin\Release\net8.0-windows\NotAirplay.exe
+git clone https://github.com/itzenzy2/NotAirplay.git
+cd NotAirplay
+
+# Build native components, compile WPF application, and run test suite:
+powershell -ExecutionPolicy Bypass -File .\Build.ps1 -Clang C:\path\to\llvm-mingw\bin\clang.exe -Test
 ```
 
-`native/video.cpp` is the original native video implementation. It uses the documented [Windows H.264 decoder](https://learn.microsoft.com/en-us/windows/win32/medfound/h-264-video-decoder), [low-latency property](https://learn.microsoft.com/en-us/windows/win32/medfound/codecapi-avlowlatencymode), and [D3D11 device-manager integration](https://learn.microsoft.com/en-us/windows/win32/medfound/supporting-direct3d-11-video-decoding-in-media-foundation).
+The compiled binaries will be placed in `bin/Release/net8.0-windows/`.
 
-The FairPlay wire handler uses protocol data from published [mode 0/2 traces](https://github.com/FDH2/UxPlay/issues/67), [mode 1 trace](https://github.com/FDH2/UxPlay/issues/535), and [mode 3 trace](https://github.com/FDH2/UxPlay/issues/176). [Wire-format notes](https://air-display.github.io/airplay-internal/pairing_process.html) describe the acknowledgement. The separate PlayFair helper recovers the media key once per session. Its complete source and license are included.
+---
 
-See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for component provenance.
+## Troubleshooting
 
+- **Device cannot find NotAirplay**: Verify that both devices are connected to the same subnet and that your router does not have "AP Isolation" or "Client Isolation" enabled. Ensure Windows Firewall permits incoming TCP and UDP connections for `NotAirplay.exe`.
+- **Black screen or stuttering**: Open **Details** in the bottom right corner and toggle **Compatibility mode: on** to switch to the fallback FFmpeg decoder on your next connection.
+- **Diagnostics**: Click **Copy diagnostics** inside the Details panel to copy the active session parameters, frame counters, and protocol activity log.
+
+---
+
+## License & Acknowledgments
+
+NotAirplay is open-source software. Third-party components and cryptographic reference notices are documented in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

@@ -56,7 +56,7 @@ public partial class MainWindow : Window
                 await ToggleDiscoveryAsync();
             }
         };
-        Record("NotAirplay feature preview 12 opened.");
+        Record("NotAirplay preview 13 opened.");
     }
 
     private async void Discovery_Click(object sender, RoutedEventArgs e)
@@ -393,13 +393,44 @@ public partial class MainWindow : Window
         }
     }
 
-    private static SolidColorBrush Brush(string value) => new((Color)ColorConverter.ConvertFromString(value));
+    private static readonly SolidColorBrush BrushReady = FreezeBrush("#10B981");
+    private static readonly SolidColorBrush BrushCyan = FreezeBrush("#38BDF8");
+    private static readonly SolidColorBrush BrushRetry = FreezeBrush("#F59E0B");
+    private static readonly SolidColorBrush BrushOffline = FreezeBrush("#5F6375");
+    private static readonly SolidColorBrush BrushMuted = FreezeBrush("#8F93A4");
+    private static readonly SolidColorBrush BrushBorderSubtle = FreezeBrush("#232532");
+    private static readonly SolidColorBrush BrushPinned = FreezeBrush("#1A1C26");
+    private static readonly SolidColorBrush BrushTransparent = FreezeBrush("#00000000");
+
+    private static SolidColorBrush FreezeBrush(string hex)
+    {
+        var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+        brush.Freeze();
+        return brush;
+    }
+
+    private static SolidColorBrush Brush(string value)
+    {
+        return value switch
+        {
+            "#10B981" or "#81C7A0" => BrushReady,
+            "#38BDF8" or "#9BBDF6" or "#A6B6CF" or "#9EAFCA" => BrushCyan,
+            "#F59E0B" or "#D8B37D" => BrushRetry,
+            "#5F6375" or "#717178" or "#63636C" => BrushOffline,
+            "#8F93A4" or "#929298" or "#9E9EA6" => BrushMuted,
+            "#232532" or "#35353A" => BrushBorderSubtle,
+            "#1A1C26" or "#303039" => BrushPinned,
+            "#00000000" => BrushTransparent,
+            _ => FreezeBrush(value),
+        };
+    }
+
     private void SetStatus(string title, string color) { StatusLabel.Text = title; StatusDot.Fill = Brush(color); }
 
     private void CopyDiagnostics_Click(object sender, RoutedEventArgs e)
     {
         string diagnostic;
-        lock (historyLock) diagnostic = "NotAirplay feature preview 11\r\n" + string.Join("\r\n", history);
+        lock (historyLock) diagnostic = "NotAirplay preview 13\r\n" + string.Join("\r\n", history);
         if (receiver is not null) diagnostic += "\r\n" + receiver.DiscoverySummary;
         if (statistics is not null) diagnostic += "\r\n" + statistics.Summary;
         try { Clipboard.SetText(diagnostic); StatusDetail.Text = "Diagnostics copied"; }
@@ -462,14 +493,14 @@ public partial class MainWindow : Window
         else
         {
             ResizeMode = ResizeMode.CanResize;
-            WindowChrome.SetWindowChrome(this, new WindowChrome { CaptionHeight = 62, ResizeBorderThickness = new Thickness(6), GlassFrameThickness = new Thickness(0) });
+            WindowChrome.SetWindowChrome(this, new WindowChrome { CaptionHeight = 56, ResizeBorderThickness = new Thickness(6), GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(12) });
             WindowState = WindowState.Normal;
             WindowState = beforeFullscreen;
         }
         TitleBar.Visibility = Footer.Visibility = fullscreen ? Visibility.Collapsed : Visibility.Visible;
-        HeaderRow.Height = new GridLength(fullscreen ? 0 : 62);
-        FooterRow.Height = new GridLength(fullscreen ? 0 : 58);
-        Stage.Margin = fullscreen ? new Thickness(0) : new Thickness(18, 0, 18, 0);
+        HeaderRow.Height = new GridLength(fullscreen ? 0 : 56);
+        FooterRow.Height = new GridLength(fullscreen ? 0 : 48);
+        Stage.Margin = fullscreen ? new Thickness(0) : new Thickness(16, 0, 16, 0);
     }
 
     protected override void OnClosing(CancelEventArgs e)
