@@ -100,6 +100,8 @@ internal sealed class MirrorSession(IPAddress local, IPAddress remote, Semaphore
     private void ExtractMetadata(byte[] body)
     {
         if (body.Length < 8) return;
+        if (body[0] == 0xFF && body[1] == 0xD8) return; // JPEG image (album artwork)
+        if (body[0] == 0x89 && body[1] == 0x50 && body[2] == 0x4E && body[3] == 0x47) return; // PNG image (album artwork)
         try
         {
             string? title = null, artist = null, album = null;

@@ -9,8 +9,8 @@ namespace NotAirplay;
 
 internal static class ControlConnection
 {
-    private const int MaxHeaderBytes = 8 * 1024;
-    private const int MaxBodyBytes = 128 * 1024;
+    private const int MaxHeaderBytes = 32 * 1024;
+    private const int MaxBodyBytes = 16 * 1024 * 1024;
     private const int MaxRequests = 16;
     private static ReadOnlySpan<byte> HeaderEnd => "\r\n\r\n"u8;
 
@@ -62,11 +62,19 @@ internal static class ControlConnection
             count -= consumed;
             buffer.AsSpan(consumed, count).CopyTo(buffer);
 
+            byte[]? discardBuffer = null;
             while (remainingBody > 0)
             {
-                var destination = requestBody is null
-                    ? buffer.AsMemory(0, Math.Min(remainingBody, buffer.Length))
-                    : requestBody.AsMemory(header.Length - remainingBody);
+                Memory<byte> destination;
+                if (requestBody is not null)
+                {
+                    destination = requestBody.AsMemory(header.Length - remainingBody);
+                }
+                else
+                {
+                    discardBuffer ??= new byte[4096];
+                    destination = discardBuffer.AsMemory(0, Math.Min(remainingBody, discardBuffer.Length));
+                }
                 int read = await stream.ReadAsync(destination, token).ConfigureAwait(false);
                 if (read == 0)
                     return;
@@ -172,7 +180,7 @@ internal static class ControlConnection
     {
         header = default;
         string[] lines = Encoding.ASCII.GetString(bytes).Split("\r\n");
-        string[] request = lines[0].Split(' ');
+        string[] request = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (request.Length != 3 || request[0].Length is 0 or > 24 ||
             !request[0].All(character => character is >= 'A' and <= 'Z' or '_' or '-') ||
             request[2] is not ("RTSP/1.0" or "HTTP/1.1"))
@@ -182,22 +190,40 @@ internal static class ControlConnection
         int? sequence = null;
         foreach (string line in lines.Skip(1))
         {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
             int colon = line.IndexOf(':');
             if (colon <= 0)
-                return false;
-            var name = line.AsSpan(0, colon);
+                continue;
+            var name = line.AsSpan(0, colon).Trim();
             var value = line.AsSpan(colon + 1).Trim();
             if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
             {
-                if (length.HasValue || !TryParseNumber(value, out int body) || body > MaxBodyBytes)
-                    return false;
-                length = body;
+                if (length.HasValue)
+                {
+                    if (!TryParseNumber(value, out int second) || second != length.Value)
+                        return false;
+                }
+                else
+                {
+                    if (!TryParseNumber(value, out int body) || body > MaxBodyBytes)
+                        return false;
+                    length = body;
+                }
             }
             else if (name.Equals("CSeq", StringComparison.OrdinalIgnoreCase))
             {
-                if (sequence.HasValue || !TryParseNumber(value, out int parsed))
-                    return false;
-                sequence = parsed;
+                if (sequence.HasValue)
+                {
+                    if (!TryParseNumber(value, out int second) || second != sequence.Value)
+                        return false;
+                }
+                else
+                {
+                    if (!TryParseNumber(value, out int parsed))
+                        return false;
+                    sequence = parsed;
+                }
             }
             else if (name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
             {

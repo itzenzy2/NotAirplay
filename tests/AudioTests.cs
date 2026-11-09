@@ -51,6 +51,10 @@ internal static class AudioTests
         if (trackInfo != "Impulsive — Thekidszn")
             throw new Exception($"DMAP metadata in SET_PARAMETER failed: '{trackInfo}'");
 
+        byte[] largeArtwork = new byte[256 * 1024];
+        largeArtwork[0] = 0xFF; largeArtwork[1] = 0xD8; largeArtwork[2] = 0xFF;
+        session.HandleSetParameter(largeArtwork);
+
         byte[] audioTeardown = BinaryPropertyList.Write(new Dictionary<string, object>
         {
             ["streams"] = new object[] { new Dictionary<string, object> { ["type"] = 96UL } }
