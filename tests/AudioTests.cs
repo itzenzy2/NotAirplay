@@ -107,7 +107,12 @@ internal static class AudioTests
             sequence++; offset+=size;
             if (sequence == 5)
             {
-                bool midVolOk = WasapiVolume.SetProcessVolume(audio.PlayerId, 0.75f);
+                bool midVolOk = false;
+                for (int r = 0; r < 5 && !midVolOk; r++)
+                {
+                    midVolOk = WasapiVolume.SetProcessVolume(audio.PlayerId, 0.75f);
+                    if (!midVolOk) await Task.Delay(50);
+                }
                 if (!midVolOk) throw new Exception($"WASAPI SetProcessVolume failed mid-stream for PID {audio.PlayerId}");
             }
             await Task.Delay(23);

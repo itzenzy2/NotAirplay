@@ -52,9 +52,12 @@ internal static class ControlConnection
             int remainingBody = header.Length - bufferedBody;
             bool isFairPlay = header is { Method: "POST", Route: "/fp-setup", Protocol: "RTSP/1.0" };
             bool isSetup = mirror is not null && header is { Method: "SETUP", Protocol: "RTSP/1.0" };
-            bool wantsBody = (isFairPlay && header.Length <= FairPlayProbe.MaxRequestSize) ||
-                             isSetup ||
-                             header.Method is "TEARDOWN" or "SET_PARAMETER" or "POST";
+            bool isArtwork = header.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true ||
+                             (header.Method == "SET_PARAMETER" && header.Length > 64 * 1024);
+            bool wantsBody = !isArtwork &&
+                             ((isFairPlay && header.Length <= FairPlayProbe.MaxRequestSize) ||
+                              isSetup ||
+                              header.Method is "TEARDOWN" or "SET_PARAMETER" or "POST");
             byte[]? requestBody = wantsBody ? new byte[header.Length] : null;
             if (requestBody is not null)
                 buffer.AsSpan(consumed, bufferedBody).CopyTo(requestBody);
@@ -188,6 +191,7 @@ internal static class ControlConnection
 
         int? length = null;
         int? sequence = null;
+        string? contentType = null;
         foreach (string line in lines.Skip(1))
         {
             if (string.IsNullOrWhiteSpace(line))
@@ -197,7 +201,11 @@ internal static class ControlConnection
                 continue;
             var name = line.AsSpan(0, colon).Trim();
             var value = line.AsSpan(colon + 1).Trim();
-            if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+            if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+            {
+                contentType = value.ToString();
+            }
+            else if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
             {
                 if (length.HasValue)
                 {
@@ -242,12 +250,12 @@ internal static class ControlConnection
                 "/fp-setup" or "/fp-setup2" or "/feedback" or "/command" or "/audioMode" or "/audio-metadata" => target,
             _ => "(other endpoint)",
         };
-        header = new(request[0], route, request[2], length ?? 0, sequence);
+        header = new(request[0], route, request[2], length ?? 0, sequence, contentType);
         return true;
     }
 
     private static bool TryParseNumber(ReadOnlySpan<char> value, out int number) =>
         int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out number);
 
-    private readonly record struct RequestHeader(string Method, string Route, string Protocol, int Length, int? Sequence);
+    private readonly record struct RequestHeader(string Method, string Route, string Protocol, int Length, int? Sequence, string? ContentType);
 }
