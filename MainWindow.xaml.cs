@@ -34,6 +34,8 @@ public partial class MainWindow : Window
     private VideoTarget? videoTarget;
     private bool compatibility;
 
+    public static bool AutoStartDiscovery { get; set; } = true;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -46,8 +48,15 @@ public partial class MainWindow : Window
         };
         statusTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher) { Interval = TimeSpan.FromSeconds(1) };
         statusTimer.Tick += (_, _) => UpdateDetails();
-        Loaded += (_, _) => statusTimer.Start();
-        Record("NotAirplay feature preview 11 opened.");
+        Loaded += async (_, _) =>
+        {
+            statusTimer.Start();
+            if (AutoStartDiscovery && receiver is null && !closeRequested)
+            {
+                await ToggleDiscoveryAsync();
+            }
+        };
+        Record("NotAirplay feature preview 12 opened.");
     }
 
     private async void Discovery_Click(object sender, RoutedEventArgs e)

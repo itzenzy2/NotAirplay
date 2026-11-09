@@ -53,6 +53,7 @@ internal static class UiTests
         var frame = new DispatcherFrame();
         var pending = dispatcher.InvokeAsync(async () =>
         {
+            MainWindow.AutoStartDiscovery = false;
             var window = new MainWindow {
                 ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual,
                 Left = -10000, Top = -10000

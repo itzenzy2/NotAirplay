@@ -25,3 +25,4 @@ NVIDIA Corporation/
 *.log
 *.tmp
 *.zip
+tests/fixtures/*.png
