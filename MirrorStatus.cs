@@ -4,12 +4,14 @@ namespace NotAirplay;
 
 internal enum MirrorState { Connecting, Streaming, Stopped, Failed }
 internal sealed record MirrorUpdate(Guid SessionId, MirrorState State, string Detail, VideoStatistics Statistics);
-internal sealed class VideoTarget(nint handle, bool preferNative = true)
+internal sealed class VideoTarget(nint handle, bool preferNative = true, int targetFps = 60)
 {
     public nint Handle { get; } = handle;
     public bool SharperVideo { get; set; }
     private int preferNativeValue = preferNative ? 1 : 0;
+    private int targetFpsValue = AppSettings.NormalizeFps(targetFps);
     public bool PreferNative { get => Volatile.Read(ref preferNativeValue) != 0; set => Volatile.Write(ref preferNativeValue, value ? 1 : 0); }
+    public int TargetFps { get => Volatile.Read(ref targetFpsValue); set => Volatile.Write(ref targetFpsValue, AppSettings.NormalizeFps(value)); }
 }
 
 internal sealed class VideoStatistics

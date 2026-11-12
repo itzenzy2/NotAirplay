@@ -6,17 +6,19 @@ Run from the source root after building the application and native components:
 dotnet run --project tests/NotAirplay.Tests.csproj -c Release -- tests/fixtures --native
 ```
 
-The test runner needs Windows, .NET 8 Desktop, FFmpeg on PATH, and a working D3D11 adapter for `--native`. Omit that flag on machines without graphics access. Tests use local TCP/UDP and briefly announce the receiver for discovery lifecycle checks. The hosted-window test creates an offscreen test window and closes it automatically.
+The test runner requires Windows, .NET 8 Desktop, `ffmpeg.exe` on `PATH`, a working Direct3D 11 adapter (for `--native`), and an active Windows audio render endpoint. Omit `--native` on headless machines without graphics access. Tests use local loopback TCP/UDP and briefly announce the receiver for discovery lifecycle checks; the hosted WPF test opens an offscreen window and closes it automatically.
 
-Coverage includes fragmented/pipelined RTSP, bounded framing, metadata, private-field filtering, FairPlay handshake fixtures, encrypted H.264/HEVC over TCP, timing, media EOF, local stop, malformed streams, decoder fallback, admission release/reconnect, UI stale-frame clearing, and two discovery start/stop cycles.
-
-Native checks decode 360 synthetic portrait frames and 90 landscape frames, change resolution on the same decoder, resize the target, verify first output arrives before input ends, and repeat with forced software decoding. The hosted WPF test verifies that the native child window exists, encrypted input reaches it, and stopping clears the picture and exits full screen.
-
-Preview 6 feeds 360 native frames at 60 fps in two-frame bursts and checks submission/replacement counts. The native target is hidden; this verifies bounded scheduling, not physical-display smoothness. The old Preview 4 unpaced command is retained only as a reference and is not directly comparable to the paced run. Audio checks verify CBC decryption including unencrypted packet tails, RFC3640 AU headers, and encrypted AAC-LC UDP input to FFplay. They do not prove audible output, AAC-ELD interoperability, or A/V synchronization on an iPhone.
+Coverage includes:
+- Fragmented and pipelined RTSP framing, HTTP `/server-info`, private field redaction, and FairPlay v3 mode 0–3 handshake fixtures.
+- Compressed paired-service mDNS queries (`QU`/`QM`, legacy unicast, malformed packets) and custom sanitized AirPlay/RAOP instance names (`<= 48` UTF-8 bytes) plus `/info` `maxFPS` (`30`, `60`, `120`) advertisement.
+- Encrypted H.264/HEVC over TCP, UDP timing, media EOF, local disconnect, malformed streams, decoder fallback, admission release/reconnect, and two discovery start/stop cycles.
+- AirPlay 128-byte header NTP timestamp extraction and paced 360-frame hardware/software D3D11 native decode + `benchmark.h264` portrait-to-`landscape.h264` target resize (`450` frames).
+- Audio AES-CBC packet tail decryption, RFC3640 AU headers, DMAP/bplist metadata, volume/pause/teardown handling, and in-process WASAPI audio output across ALAC (`codec=2`), Media Foundation AAC-LC (`codec=4` encrypted RTP + WASAPI session volume sync), and AAC-ELD (`codec=8`) plus device enumeration.
+- WPF UI state transitions (connecting, streaming, audio-only/paused, cleared video frame, stale callback rejection), `SetThreadExecutionState` wake-lock state mapping, Fluent UI layout captures at `960x720` and `620x520`, and hosted offscreen D3D11 fullscreen/resize/minimize lifecycle.
 
 ## Fixtures
 
-`h264.mirror` and `hevc.mirror` contain 12 independently encrypted synthetic frames each, originally generated with FFmpeg and Node/OpenSSL for Preview 4. The setup and FairPlay fixtures are protocol test data, not captured user screen content. Published handshake packet fixtures are cited in the main README.
+`h264.mirror` and `hevc.mirror` contain 12 independently encrypted synthetic frames each, originally generated with FFmpeg and Node/OpenSSL. The setup and FairPlay fixtures are protocol test data, not captured user screen content.
 
 The larger elementary streams are reproducible with:
 
@@ -25,4 +27,4 @@ ffmpeg -f lavfi -i "testsrc2=size=500x1080:rate=60" -frames:v 360 -c:v libx264 -
 ffmpeg -f lavfi -i "testsrc2=size=1080x500:rate=60" -frames:v 90 -c:v libx264 -preset veryfast -tune zerolatency -x264-params "aud=1:keyint=60:scenecut=0" -pix_fmt yuv420p -y tests/fixtures/landscape.h264
 ```
 
-The runner also writes layout PNGs and protocol serialization samples into the fixture directory for inspection.
+The runner also writes layout PNGs (`tests/fixtures/window-*.png`, gitignored) and protocol serialization samples into the fixture directory for visual inspection.

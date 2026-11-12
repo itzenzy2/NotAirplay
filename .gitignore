@@ -26,3 +26,6 @@ NVIDIA Corporation/
 *.tmp
 *.zip
 tests/fixtures/*.png
+
+# Local design tooling
+.impeccable/

@@ -1,132 +1,105 @@
 <Window x:Class="NotAirplay.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:NotAirplay"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="NotAirplay" Width="960" Height="720" MinWidth="620" MinHeight="520"
-        Background="#0B0C10" Foreground="#F1F2F6" FontFamily="Segoe UI Variable Text, Segoe UI, -apple-system, sans-serif"
-        UseLayoutRounding="True" SnapsToDevicePixels="True" WindowStartupLocation="CenterScreen" WindowStyle="None"
-        ResizeMode="CanResize" PreviewKeyDown="Window_KeyDown" Icon="assets/app.ico">
+        xmlns:local="clr-namespace:NotAirplay"
+        Title="NotAirplay"
+        Width="960"
+        Height="720"
+        MinWidth="620"
+        MinHeight="520"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        Background="{DynamicResource AcousticStageFallbackBrush}"
+        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+        PreviewKeyDown="Window_KeyDown"
+        Icon="assets/app.ico">
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="56" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="12" />
+        <shell:WindowChrome CaptionHeight="48" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="12" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
-        <SolidColorBrush x:Key="TextPrimary" Color="#F1F2F6" />
-        <SolidColorBrush x:Key="TextSecondary" Color="#8F93A4" />
-        <SolidColorBrush x:Key="TextMuted" Color="#5F6375" />
-        <SolidColorBrush x:Key="SurfaceCard" Color="#13141B" />
-        <SolidColorBrush x:Key="SurfaceHover" Color="#1A1C26" />
-        <SolidColorBrush x:Key="SurfacePressed" Color="#232532" />
-        <SolidColorBrush x:Key="BorderSubtle" Color="#232532" />
-        <SolidColorBrush x:Key="BorderHighlight" Color="#2E3142" />
-        <SolidColorBrush x:Key="AccentEmerald" Color="#10B981" />
-        <SolidColorBrush x:Key="AccentCyan" Color="#38BDF8" />
-
-        <Style x:Key="ButtonBase" TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
-            <Setter Property="Background" Value="{StaticResource SurfaceCard}" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderSubtle}" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="Padding" Value="14,8" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="1" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="{StaticResource SurfaceHover}" />
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource BorderHighlight}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="{StaticResource SurfacePressed}" />
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource AccentCyan}" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Surface" Property="Opacity" Value="0.4" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Style x:Key="WindowCaptionButton" TargetType="Button">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="36" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
-            <Setter Property="Padding" Value="8,6" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="1" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="{StaticResource SurfaceHover}" />
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource BorderSubtle}" />
-                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="{StaticResource SurfacePressed}" />
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource AccentCyan}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="CaptionButton" TargetType="Button">
-            <Setter Property="Width" Value="36" />
-            <Setter Property="Height" Value="32" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="Focusable" Value="False" />
             <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="6">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="6">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="{StaticResource SurfaceHover}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#14FFFFFF" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="{StaticResource SurfacePressed}" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#0CFFFFFF" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-
-        <Style x:Key="CloseCaptionButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+        <Style x:Key="WindowCloseButton" TargetType="Button" BasedOn="{StaticResource WindowCaptionButton}">
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="6">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="6">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="#C53030" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#C42B1C" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Surface" Property="Background" Value="#9B2C2C" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#9B2216" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="FpsSegmentButton" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="11,5" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Pill"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="{DynamicResource AcousticLiveSubtleBrush}" />
+                                <Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource AcousticLiveBorderBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AcousticLiveTextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Pill" Property="Opacity" Value="0.45" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -134,196 +107,777 @@
             </Setter>
         </Style>
     </Window.Resources>
-
-    <Border BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1">
-        <Grid>
+    <Border x:Name="WindowOuterBorder" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+        <Grid x:Name="RootShellGrid" SizeChanged="RootShellGrid_SizeChanged">
             <Grid.RowDefinitions>
-                <RowDefinition x:Name="HeaderRow" Height="56" />
+                <RowDefinition x:Name="HeaderRow" Height="48" />
                 <RowDefinition Height="*" />
-                <RowDefinition x:Name="FooterRow" Height="48" />
+                <RowDefinition x:Name="FooterRow" Height="44" />
             </Grid.RowDefinitions>
 
-            <!-- Title Bar -->
-            <Grid x:Name="TitleBar" Margin="16,0,12,0">
+            <!-- Opaque Fluent Title Bar -->
+            <Grid x:Name="TitleBar" Grid.Row="0" Margin="16,0,6,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Brand Icon: NotAirplay App Logo -->
-                    <Border Width="28" Height="28" Background="{StaticResource SurfaceCard}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="8" Margin="0,0,10,0" ClipToBounds="True">
-                        <Image Source="assets/logo.png" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-                    </Border>
-                    <TextBlock Text="NotAirplay" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" />
+                    <Image Source="pack://application:,,,/NotAirplay;component/assets/logo.png"
+                           Width="20"
+                           Height="20"
+                           VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock x:Name="TitleBarBrandText"
+                               Text="NotAirplay"
+                               FontSize="12.5"
+                               FontWeight="Medium"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               Margin="10,0,0,0"
+                               VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- Status Capsule and Window Controls -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Border Background="{StaticResource SurfaceCard}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="12" Padding="10,4" Margin="0,0,16,0" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="10,4"
+                            Margin="0,0,6,0"
+                            VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="{StaticResource AccentEmerald}" VerticalAlignment="Center" />
-                            <TextBlock x:Name="StatusLabel" Text="Ready" Foreground="{StaticResource TextSecondary}" FontSize="11" FontWeight="Medium" Margin="6,0,0,0" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                            <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{DynamicResource AcousticLiveBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="StatusLabel"
+                                       Text="Ready"
+                                       FontSize="12"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                       Margin="7,0,0,0"
+                                       VerticalAlignment="Center"
+                                       AutomationProperties.LiveSetting="Polite" />
                         </StackPanel>
                     </Border>
-                    <Button Style="{StaticResource CaptionButton}" Click="Minimize_Click" ToolTip="Minimize" AutomationProperties.Name="Minimize">
-                        <Path Data="M 0,5 H 10" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2" />
+                    <ui:Button x:Name="PinButton"
+                               Appearance="Transparent"
+                               Padding="8,5"
+                               Margin="0,0,6,0"
+                               Click="Pin_Click"
+                               ToolTip="Keep on top"
+                               AutomationProperties.Name="Keep on top">
+                        <ui:SymbolIcon x:Name="PinIcon" Symbol="Pin24" FontSize="15" />
+                    </ui:Button>
+                    <Button Style="{StaticResource WindowCaptionButton}"
+                            Click="Minimize_Click"
+                            ToolTip="Minimize"
+                            AutomationProperties.Name="Minimize">
+                        <Path Data="M 0,5 H 10" Stroke="#E4E4E7" StrokeThickness="1.2" />
                     </Button>
-                    <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" Click="Maximize_Click" ToolTip="Maximize" AutomationProperties.Name="Maximize">
-                        <Path x:Name="MaximizeGlyph" Data="M 0,0 H 10 V 10 H 0 Z" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2" />
+                    <Button x:Name="MaximizeButton"
+                            Style="{StaticResource WindowCaptionButton}"
+                            Click="Maximize_Click"
+                            ToolTip="Maximize"
+                            AutomationProperties.Name="Maximize">
+                        <Path x:Name="MaximizeGlyph" Data="M 0,0 H 10 V 10 H 0 Z" Stroke="#E4E4E7" StrokeThickness="1.2" />
                     </Button>
-                    <Button Style="{StaticResource CloseCaptionButton}" Click="Close_Click" ToolTip="Close" AutomationProperties.Name="Close">
-                        <Path Data="M 0,0 L 10,10 M 10,0 L 0,10" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2" />
+                    <Button Style="{StaticResource WindowCloseButton}"
+                            Click="Close_Click"
+                            ToolTip="Close"
+                            AutomationProperties.Name="Close">
+                        <Path Data="M 0,0 L 10,10 M 10,0 L 0,10" Stroke="#E4E4E7" StrokeThickness="1.2" />
                     </Button>
                 </StackPanel>
             </Grid>
 
-            <!-- Main Stage -->
-            <Grid Grid.Row="1">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+        <!-- Main Workspace Shell + Telemetry Drawer -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-                <Grid x:Name="Stage" Margin="16,0" Background="#0B0C10" MouseDown="Stage_MouseDown">
-                    <!-- Video Layer (Hardware / Fallback surface) -->
-                    <Grid x:Name="VideoLayer" Visibility="Hidden" Background="#000000" ClipToBounds="True">
-                        <local:VideoSurface x:Name="NativeSurface" Visibility="Hidden" />
-                        <Image x:Name="MirrorImage" Visibility="Collapsed" Stretch="Uniform" RenderTransformOrigin="0.5,0.5" RenderOptions.BitmapScalingMode="HighQuality" />
-                    </Grid>
+            <ui:NavigationView x:Name="RootNav"
+                               Grid.Column="0"
+                               PaneDisplayMode="Left"
+                               OpenPaneLength="188"
+                               CompactPaneLength="48"
+                               IsPaneOpen="True"
+                               IsBackButtonVisible="Collapsed"
+                               IsPaneToggleVisible="True"
+                               FrameMargin="0"
+                               TransitionDuration="150">
+                <ui:NavigationView.Resources>
+                    <Style TargetType="{x:Type ui:NavigationViewContentPresenter}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </Style>
+                </ui:NavigationView.Resources>
+                <ui:NavigationView.MenuItems>
+                    <ui:NavigationViewItem x:Name="NavReceiver"
+                                           Content="Receiver"
+                                           Tag="receiver"
+                                           IsActive="True"
+                                           Icon="{ui:SymbolIcon Cast24}"
+                                           Click="NavReceiver_Click" />
+                    <ui:NavigationViewItem x:Name="NavAudio"
+                                           Content="Audio deck"
+                                           Tag="audio"
+                                           Icon="{ui:SymbolIcon DesktopSpeaker24}"
+                                           Click="NavAudio_Click" />
+                </ui:NavigationView.MenuItems>
+                <ui:NavigationView.FooterMenuItems>
+                    <ui:NavigationViewItem x:Name="NavTelemetry"
+                                           Content="Diagnostics"
+                                           Tag="diagnostics"
+                                           Icon="{ui:SymbolIcon Pulse24}"
+                                           Click="NavTelemetry_Click" />
+                </ui:NavigationView.FooterMenuItems>
 
-                    <!-- Studio Audio Card -->
-                    <Grid x:Name="AudioOnlyPanel" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <Border Background="{StaticResource SurfaceCard}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="16" Padding="40,32" MaxWidth="440">
-                            <StackPanel HorizontalAlignment="Center">
-                                <!-- Waveform Visualizer Glyph -->
-                                <Border Width="64" Height="64" Background="{StaticResource SurfaceHover}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="16" HorizontalAlignment="Center" Margin="0,0,0,20">
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Rectangle Width="3" Height="14" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentEmerald}" Margin="2,0" />
-                                        <Rectangle Width="3" Height="26" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentCyan}" Margin="2,0" />
-                                        <Rectangle Width="3" Height="38" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentEmerald}" Margin="2,0" />
-                                        <Rectangle Width="3" Height="22" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentCyan}" Margin="2,0" />
-                                        <Rectangle Width="3" Height="12" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentEmerald}" Margin="2,0" />
-                                    </StackPanel>
-                                </Border>
-                                <TextBlock x:Name="AudioDeviceText" Text="iPhone" FontSize="18" FontWeight="SemiBold" TextAlignment="Center" Foreground="{StaticResource TextPrimary}" />
-                                <TextBlock x:Name="AudioTrackText" Text="Connected · Ready to play" FontSize="13" Foreground="{StaticResource TextSecondary}" TextAlignment="Center" Margin="0,6,0,0" MaxWidth="380" TextWrapping="Wrap" />
-                                <Border Background="{StaticResource SurfaceHover}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="10" Padding="10,4" HorizontalAlignment="Center" Margin="0,14,0,0">
-                                    <TextBlock x:Name="AudioVolumeText" Text="Volume 100%" FontSize="11" FontWeight="Medium" Foreground="{StaticResource AccentEmerald}" TextAlignment="Center" />
-                                </Border>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
+                <ui:NavigationView.ContentOverlay>
+                    <Grid x:Name="Stage" Background="Transparent">
+                        <!-- View 1: Receiver Standby / Connection Workspace -->
+                        <Grid x:Name="ReceiverHome" Visibility="Visible">
+                            <ui:DynamicScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Margin="28,24,28,24">
+                                    <!-- Top Hero Status Header -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
 
-                    <!-- Standby Home Screen -->
-                    <Grid x:Name="ReceiverHome" MaxWidth="520" Margin="24,12" VerticalAlignment="Center">
-                        <Border Background="{StaticResource SurfaceCard}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="16" Padding="36,32">
-                            <StackPanel VerticalAlignment="Center">
-                                <!-- Vector Illustration: Studio Display + Mobile Pairing -->
-                                <Viewbox Width="160" Height="110" Margin="0,0,0,24" HorizontalAlignment="Center" Stretch="Uniform">
-                                    <Canvas Width="160" Height="110">
-                                        <!-- Desktop Display -->
-                                        <Rectangle Canvas.Left="10" Canvas.Top="6" Width="120" Height="78" RadiusX="8" RadiusY="8" Stroke="{StaticResource BorderHighlight}" StrokeThickness="1.5" Fill="{StaticResource SurfaceHover}" />
-                                        <Rectangle Canvas.Left="16" Canvas.Top="12" Width="108" Height="66" RadiusX="4" RadiusY="4" Fill="#0B0C10" />
-                                        <!-- AirPlay Beacon Wave inside monitor -->
-                                        <Path Data="M 64,48 L 70,40 L 76,48 Z" Fill="{StaticResource AccentEmerald}" />
-                                        <Path Data="M 60,36 C 66,32 74,32 80,36" Stroke="{StaticResource TextMuted}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                        <Path Data="M 54,30 C 64,24 76,24 86,30" Stroke="{StaticResource BorderSubtle}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                        <!-- Display Stand -->
-                                        <Path Data="M 58,84 V 96 H 82 V 84 M 46,96 H 94" Stroke="{StaticResource BorderHighlight}" StrokeThickness="1.5" StrokeLineJoin="Round" />
-                                        <!-- Paired Mobile Device -->
-                                        <Rectangle Canvas.Left="108" Canvas.Top="38" Width="42" Height="68" RadiusX="8" RadiusY="8" Fill="{StaticResource SurfaceCard}" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.5" />
-                                        <!-- Speaker notch -->
-                                        <Rectangle Canvas.Left="123" Canvas.Top="43" Width="12" Height="3" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource TextMuted}" />
-                                        <!-- Mobile screen -->
-                                        <Rectangle Canvas.Left="112" Canvas.Top="49" Width="34" Height="48" RadiusX="4" RadiusY="4" Fill="#0B0C10" />
-                                        <!-- Home indicator -->
-                                        <Path Data="M 124,101 H 134" Stroke="{StaticResource TextMuted}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                    </Canvas>
-                                </Viewbox>
+                                        <Image Grid.Column="0"
+                                               Source="pack://application:,,,/NotAirplay;component/assets/logo.png"
+                                               Width="52"
+                                               Height="52"
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality" />
 
-                                <TextBlock x:Name="HeroTitle" Text="Ready for your iPhone." FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" TextAlignment="Center" TextWrapping="Wrap" />
-                                <TextBlock x:Name="HeroDetail" Text="Open Control Center on your iPhone to connect." FontSize="13" Foreground="{StaticResource TextSecondary}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20" />
+                                        <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center">
+                                            <TextBlock x:Name="HeroTitle"
+                                                       Text="Ready for your iPhone."
+                                                       FontSize="24"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock x:Name="HeroDetail"
+                                                       Text="Select NotAirplay in Screen Mirroring or Audio on your iPhone."
+                                                       FontSize="13"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Margin="0,4,0,0"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
 
-                                <Button x:Name="DiscoveryButton" Visibility="Collapsed" Content="Start receiver" Style="{StaticResource ButtonBase}" Background="{StaticResource TextPrimary}" Foreground="#0B0C10" Padding="20,9" HorizontalAlignment="Center" Margin="0,20,0,0" Click="Discovery_Click" />
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
+                                            <ui:Button x:Name="DiscoveryButton"
+                                                       Visibility="Collapsed"
+                                                       Content="Start receiver"
+                                                       Appearance="Primary"
+                                                       Padding="18,9"
+                                                       Click="Discovery_Click" />
+                                        </StackPanel>
+                                    </Grid>
 
-                                <!-- Tactile 3-Step Connection Capsules -->
-                                <StackPanel x:Name="ConnectInstructions" Visibility="Visible" Margin="0,24,0,0" HorizontalAlignment="Center">
-                                    <TextBlock Text="Quick connect" FontSize="11" FontWeight="Medium" Foreground="{StaticResource TextMuted}" TextAlignment="Center" Margin="0,0,0,12" />
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <!-- Step 1 -->
-                                        <Border Background="{StaticResource SurfaceHover}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="8" Padding="10,6">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="1" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentEmerald}" Margin="0,0,6,0" />
-                                                <TextBlock Text="Control Center" FontSize="11" Foreground="{StaticResource TextPrimary}" />
+                                    <!-- Structured Two-Column Workspace Cards -->
+                                    <Grid x:Name="HomeCardsGrid" Margin="0,24,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition x:Name="HomeCardSpacer" Width="16" />
+                                            <ColumnDefinition x:Name="HomeCardCol2" Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition x:Name="HomeCardRowSpacer" Height="0" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Connect Card -->
+                                        <Border x:Name="ConnectInstructions"
+                                                Grid.Column="0"
+                                                Grid.Row="0"
+                                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="20">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <ui:SymbolIcon Symbol="PhoneDesktop24" FontSize="18" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                    <TextBlock Text="Connect from iPhone or iPad"
+                                                               FontSize="14"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                               Margin="10,0,0,0"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+
+                                                <Grid Margin="0,16,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:SymbolIcon Symbol="Cast24" FontSize="16" Foreground="{DynamicResource AcousticLiveTextBrush}" VerticalAlignment="Top" Margin="0,2,12,0" />
+                                                    <StackPanel Grid.Column="1">
+                                                        <TextBlock Text="Screen Mirroring" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                        <TextBlock x:Name="ConnectMirrorHint" Text="Swipe into Control Center, tap Screen Mirroring, and choose NotAirplay." FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <Grid Margin="0,14,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:SymbolIcon Symbol="MusicNote224" FontSize="16" Foreground="{DynamicResource AcousticWaveCyanBrush}" VerticalAlignment="Top" Margin="0,2,12,0" />
+                                                    <StackPanel Grid.Column="1">
+                                                        <TextBlock Text="AirPlay Audio" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                        <TextBlock Text="Open the AirPlay output icon in Control Center or Now Playing for speaker mode." FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,16,0,12" />
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:SymbolIcon Grid.Column="0" Symbol="Wifi124" FontSize="15" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,1,8,0" VerticalAlignment="Top" />
+                                                    <TextBlock Grid.Column="1" Text="Same local Wi-Fi or Ethernet network. No iOS app required." FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
+                                                </Grid>
                                             </StackPanel>
                                         </Border>
-                                        <TextBlock Text="›" Foreground="{StaticResource TextMuted}" FontSize="13" Margin="8,0" VerticalAlignment="Center" />
-                                        <!-- Step 2 -->
-                                        <Border Background="{StaticResource SurfaceHover}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="8" Padding="10,6">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="2" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentCyan}" Margin="0,0,6,0" />
-                                                <TextBlock Text="Screen Mirroring / Audio" FontSize="11" Foreground="{StaticResource TextPrimary}" />
-                                            </StackPanel>
+
+                                        <!-- Capabilities & Standby Profile Card -->
+                                        <Border x:Name="HomeCapabilitiesCard"
+                                                Grid.Column="2"
+                                                Grid.Row="0"
+                                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="20">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <ui:SymbolIcon Symbol="DeveloperBoard24" FontSize="18" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                        <TextBlock Text="Receiver pipeline"
+                                                                   FontSize="14"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                   Margin="10,0,0,0"
+                                                                   VerticalAlignment="Center" />
+                                                    </StackPanel>
+
+                                                    <Grid Margin="0,16,0,0" Typography.NumeralAlignment="Tabular">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="80" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="10" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="10" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="10" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+
+                                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Video" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                        <TextBlock x:Name="HomeVideoModeText" Grid.Row="0" Grid.Column="1" Text="Direct3D 11 · H.264 / HEVC · 60 fps" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+
+                                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Audio" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="ALAC lossless · AAC-ELD / LC" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+
+                                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Volume" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="WASAPI hardware sync" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+
+                                                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Standby" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                        <TextBlock Grid.Row="6" Grid.Column="1" Text="Persistent between audio tracks" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+                                                    </Grid>
+                                                </StackPanel>
+
+                                                <ui:Button x:Name="HomeDetailsButton"
+                                                           Grid.Row="1"
+                                                           Margin="0,16,0,0"
+                                                           Appearance="Secondary"
+                                                           HorizontalAlignment="Stretch"
+                                                           Content="Open telemetry &amp; log"
+                                                           Icon="{ui:SymbolIcon Pulse24}"
+                                                           Click="Details_Click" />
+                                            </Grid>
                                         </Border>
-                                        <TextBlock Text="›" Foreground="{StaticResource TextMuted}" FontSize="13" Margin="8,0" VerticalAlignment="Center" />
-                                        <!-- Step 3 -->
-                                        <Border Background="{StaticResource SurfaceHover}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="8" Padding="10,6">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="3" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentEmerald}" Margin="0,0,6,0" />
-                                                <TextBlock Text="NotAirplay" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" />
-                                            </StackPanel>
-                                        </Border>
-                                    </StackPanel>
+                                    </Grid>
+
+                                    <!-- Quick Desk Controls & Preferences Strip -->
+                                    <Border Margin="0,16,0,0"
+                                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="20,16">
+                                        <StackPanel>
+                                            <WrapPanel VerticalAlignment="Center">
+                                                <StackPanel Margin="0,2,24,6">
+                                                    <TextBlock Text="Receiver name"
+                                                               FontSize="12"
+                                                               FontWeight="Medium"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               Margin="0,0,0,6" />
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <ui:TextBox x:Name="ReceiverNameBox"
+                                                                    Width="188"
+                                                                    Height="34"
+                                                                    PlaceholderText="NotAirplay"
+                                                                    MaxLength="48"
+                                                                    FontSize="12.5"
+                                                                    Padding="10,0"
+                                                                    VerticalContentAlignment="Center"
+                                                                    TextChanged="ReceiverNameBox_TextChanged"
+                                                                    KeyDown="ReceiverNameBox_KeyDown"
+                                                                    AutomationProperties.Name="Custom receiver name" />
+                                                        <ui:Button x:Name="ApplyNameButton"
+                                                                   Content="Apply"
+                                                                   Appearance="Secondary"
+                                                                   Height="34"
+                                                                   Margin="8,0,0,0"
+                                                                   Padding="14,0"
+                                                                   FontSize="12"
+                                                                   IsEnabled="False"
+                                                                   Click="ApplyName_Click"
+                                                                   AutomationProperties.Name="Apply receiver name" />
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <StackPanel Margin="0,2,0,6">
+                                                    <TextBlock Text="Frame rate"
+                                                               FontSize="12"
+                                                               FontWeight="Medium"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               Margin="0,0,0,6" />
+                                                    <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="6"
+                                                            Height="34"
+                                                            Padding="3">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <RadioButton x:Name="Fps30Button"
+                                                                         GroupName="TargetFps"
+                                                                         Style="{StaticResource FpsSegmentButton}"
+                                                                         Content="30 fps"
+                                                                         Tag="30"
+                                                                         Checked="FpsOption_Checked"
+                                                                         AutomationProperties.Name="Frame rate 30 fps" />
+                                                            <RadioButton x:Name="Fps60Button"
+                                                                         GroupName="TargetFps"
+                                                                         Style="{StaticResource FpsSegmentButton}"
+                                                                         Content="60 fps"
+                                                                         Tag="60"
+                                                                         IsChecked="True"
+                                                                         Margin="2,0,0,0"
+                                                                         Checked="FpsOption_Checked"
+                                                                         AutomationProperties.Name="Frame rate 60 fps" />
+                                                            <RadioButton x:Name="Fps120Button"
+                                                                         GroupName="TargetFps"
+                                                                         Style="{StaticResource FpsSegmentButton}"
+                                                                         Content="120 fps"
+                                                                         Tag="120"
+                                                                         Margin="2,0,0,0"
+                                                                         Checked="FpsOption_Checked"
+                                                                         AutomationProperties.Name="Frame rate 120 fps" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </StackPanel>
+                                            </WrapPanel>
+
+                                            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="0,1,0,0"
+                                                    Margin="0,10,0,12" />
+
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <WrapPanel VerticalAlignment="Center">
+                                                    <ui:ToggleSwitch x:Name="HomePinToggle"
+                                                                     Content="Keep window on top"
+                                                                     Margin="0,2,24,2"
+                                                                     Click="HomePinToggle_Click" />
+                                                    <ui:ToggleSwitch x:Name="HomeCompatToggle"
+                                                                     Content="FFmpeg compatibility fallback"
+                                                                     Margin="0,2,0,2"
+                                                                     Click="HomeCompatToggle_Click" />
+                                                </WrapPanel>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="F11 / Double-click: Full screen"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="16,0,0,0" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
-                            </StackPanel>
-                        </Border>
+                            </ui:DynamicScrollViewer>
+                        </Grid>
+
+                        <!-- View 2: Docked Acoustic Audio Deck -->
+                        <Grid x:Name="AudioOnlyPanel" Visibility="Collapsed">
+                            <ui:DynamicScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Margin="28,24,28,24">
+                                    <!-- Active Stream Identity Deck -->
+                                    <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="24">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Acoustic Visualizer Emblem -->
+                                            <Border Grid.Column="0"
+                                                    Width="72"
+                                                    Height="72"
+                                                    CornerRadius="12"
+                                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1"
+                                                    VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Rectangle Width="4" Height="16" RadiusX="2" RadiusY="2" Fill="{DynamicResource AcousticLiveBrush}" Margin="2,0" />
+                                                    <Rectangle Width="4" Height="30" RadiusX="2" RadiusY="2" Fill="{DynamicResource AcousticWaveCyanBrush}" Margin="2,0" />
+                                                    <Rectangle Width="4" Height="42" RadiusX="2" RadiusY="2" Fill="{DynamicResource AcousticLiveBrush}" Margin="2,0" />
+                                                    <Rectangle Width="4" Height="24" RadiusX="2" RadiusY="2" Fill="{DynamicResource AcousticWaveCyanBrush}" Margin="2,0" />
+                                                    <Rectangle Width="4" Height="14" RadiusX="2" RadiusY="2" Fill="{DynamicResource AcousticLiveBrush}" Margin="2,0" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Device & Track Readout -->
+                                            <StackPanel Grid.Column="1" Margin="20,0,16,0" VerticalAlignment="Center">
+                                                <Border x:Name="AudioStateBadge"
+                                                        HorizontalAlignment="Left"
+                                                        CornerRadius="10"
+                                                        Padding="8,3"
+                                                        Background="{DynamicResource AcousticLiveSubtleBrush}"
+                                                        BorderBrush="{DynamicResource AcousticLiveBorderBrush}"
+                                                        BorderThickness="1">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Ellipse x:Name="AudioStateDot" Width="6" Height="6" Fill="{DynamicResource AcousticLiveBrush}" VerticalAlignment="Center" />
+                                                        <TextBlock x:Name="AudioStateBadgeText"
+                                                                   Text="AirPlay Audio"
+                                                                   FontSize="11"
+                                                                   FontWeight="Medium"
+                                                                   Foreground="{DynamicResource AcousticLiveTextBrush}"
+                                                                   Margin="6,0,0,0" />
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <TextBlock x:Name="AudioDeviceText"
+                                                           Text="iPhone"
+                                                           FontSize="22"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                           Margin="0,8,0,0"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock x:Name="AudioTrackText"
+                                                           Text="AirPlay Audio"
+                                                           FontSize="14"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                           Margin="0,4,0,0"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Signal Details + Hardware Volume Grid -->
+                                    <Grid x:Name="AudioCardsGrid" Margin="0,16,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition x:Name="AudioCardSpacer" Width="16" />
+                                            <ColumnDefinition x:Name="AudioCardCol2" Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition x:Name="AudioCardRowSpacer" Height="0" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Signal & Codec Card -->
+                                        <Border Grid.Column="0"
+                                                Grid.Row="0"
+                                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="20">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <ui:SymbolIcon Symbol="DesktopSpeaker24" FontSize="17" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                    <TextBlock Text="Signal pipeline" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                                                </StackPanel>
+
+                                                <Grid Margin="0,16,0,0" Typography.NumeralAlignment="Tabular">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="80" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="10" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="10" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Format" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                    <TextBlock x:Name="AudioCodecText" Grid.Row="0" Grid.Column="1" Text="44.1 kHz Stereo · ALAC / AAC" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Output" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+                                                    <ComboBox x:Name="AudioOutputCombo"
+                                                              Grid.Row="2"
+                                                              Grid.Column="1"
+                                                              FontSize="12"
+                                                              Padding="10,5"
+                                                              HorizontalAlignment="Stretch"
+                                                              VerticalAlignment="Center"
+                                                              DropDownOpened="AudioOutputCombo_DropDownOpened"
+                                                              SelectionChanged="AudioOutputCombo_SelectionChanged"
+                                                              AutomationProperties.Name="Audio output device" />
+
+                                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Standby" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="Stays connected while paused" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- iOS Hardware Volume Meter Card -->
+                                        <Border x:Name="AudioVolumeCard"
+                                                Grid.Column="2"
+                                                Grid.Row="0"
+                                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="20">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:SymbolIcon x:Name="AudioVolumeIcon" Grid.Column="0" Symbol="Speaker224" FontSize="17" Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="1" Text="Device volume" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                                                    <TextBlock x:Name="AudioVolumeText"
+                                                               Grid.Column="2"
+                                                               Text="—"
+                                                               FontSize="16"
+                                                               FontWeight="SemiBold"
+                                                               Typography.NumeralAlignment="Tabular"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               VerticalAlignment="Center" />
+                                                </Grid>
+
+                                                <ProgressBar x:Name="AudioVolumeBar"
+                                                             Minimum="0"
+                                                             Maximum="100"
+                                                             Value="0"
+                                                             Height="6"
+                                                             Margin="0,18,0,0"
+                                                             Foreground="{DynamicResource AcousticLiveBrush}"
+                                                             Background="{DynamicResource ControlFillColorSecondaryBrush}" />
+
+                                                <TextBlock Text="Volume adjusts automatically from your iPhone side buttons or Control Center slider via WASAPI."
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           Margin="0,12,0,0"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:DynamicScrollViewer>
+                        </Grid>
                     </Grid>
+                </ui:NavigationView.ContentOverlay>
+            </ui:NavigationView>
+
+            <!-- Live Video Mirroring Viewport (Kept permanently in visual tree outside NavigationView for unobstructed NativeSurface HWND) -->
+            <Grid x:Name="VideoLayer"
+                  Grid.Column="0"
+                  Visibility="Hidden"
+                  Background="#000000"
+                  ClipToBounds="True"
+                  MouseDown="Stage_MouseDown">
+                <local:VideoSurface x:Name="NativeSurface" Visibility="Hidden" />
+                <Image x:Name="MirrorImage" Visibility="Collapsed" Stretch="Uniform" RenderTransformOrigin="0.5,0.5" RenderOptions.BitmapScalingMode="HighQuality" />
+            </Grid>
+
+            <!-- Collapsible Fluent Session Telemetry Drawer -->
+            <Border x:Name="DiagnosticsPanel"
+                    Grid.Column="1"
+                    Width="312"
+                    Visibility="Collapsed"
+                    Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1,0,0,0"
+                    Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Session telemetry"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   VerticalAlignment="Center" />
+                        <ui:Button Grid.Column="1"
+                                   Appearance="Transparent"
+                                   Padding="6,5"
+                                   Click="Details_Click"
+                                   ToolTip="Close details"
+                                   AutomationProperties.Name="Close session details">
+                            <ui:SymbolIcon Symbol="Dismiss24" FontSize="14" />
+                        </ui:Button>
+                    </Grid>
+
+                    <Border Grid.Row="1"
+                            Margin="0,14,0,0"
+                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="14">
+                        <TextBlock x:Name="StatsDetail"
+                                   Text="No active session"
+                                   FontSize="12"
+                                   FontFamily="Cascadia Code, Consolas, Segoe UI"
+                                   Typography.NumeralAlignment="Tabular"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   LineHeight="19" />
+                    </Border>
+
+                    <StackPanel Grid.Row="2" Margin="0,14,0,10">
+                        <ui:Button x:Name="CompatibilityButton"
+                                   Content="Compatibility mode: off"
+                                   Appearance="Secondary"
+                                   HorizontalAlignment="Stretch"
+                                   Icon="{ui:SymbolIcon Options24}"
+                                   Click="Compatibility_Click" />
+                        <TextBlock Text="Forces FFmpeg decode on your next connection if playback issues occur."
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   FontSize="11.5"
+                                   TextWrapping="Wrap"
+                                   Margin="0,6,0,14" />
+                        <TextBlock Text="Activity log"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+
+                    <Border Grid.Row="3"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="10">
+                        <TextBox x:Name="DiagnosticLog"
+                                 Style="{x:Null}"
+                                 IsReadOnly="True"
+                                 TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 Background="Transparent"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                 CaretBrush="{DynamicResource TextFillColorPrimaryBrush}"
+                                 BorderThickness="0"
+                                 FontFamily="Cascadia Code, Consolas"
+                                 FontSize="11"
+                                 Typography.NumeralAlignment="Tabular"
+                                 Padding="0" />
+                    </Border>
+
+                    <ui:Button Grid.Row="4"
+                               Content="Copy diagnostics"
+                               Appearance="Secondary"
+                               HorizontalAlignment="Stretch"
+                               Icon="{ui:SymbolIcon Copy24}"
+                               Click="CopyDiagnostics_Click"
+                               Margin="0,12,0,0" />
                 </Grid>
-
-                <!-- Diagnostics & Session Drawer -->
-                <Border x:Name="DiagnosticsPanel" Grid.Column="1" Width="300" Visibility="Collapsed" Background="{StaticResource SurfaceCard}" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1,0,0,0" Padding="20">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="Session telemetry" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" />
-                            <TextBlock x:Name="StatsDetail" Text="No active session" FontSize="11" FontFamily="Cascadia Code, Consolas, Segoe UI" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,12,0,0" LineHeight="18" />
-                        </StackPanel>
-                        <StackPanel Grid.Row="1" Margin="0,16,0,12">
-                            <Button x:Name="CompatibilityButton" Content="Compatibility mode: off" Style="{StaticResource ButtonBase}" FontSize="11" Click="Compatibility_Click" />
-                            <TextBlock Text="For playback issues. Applies to your next connection." Foreground="{StaticResource TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,14" />
-                            <TextBlock Text="Activity log" FontSize="11" FontWeight="Medium" Foreground="{StaticResource TextMuted}" />
-                        </StackPanel>
-                        <Border Grid.Row="2" Background="#0B0C10" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1" CornerRadius="8" Padding="8">
-                            <TextBox x:Name="DiagnosticLog" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="Transparent" Foreground="{StaticResource TextSecondary}" BorderThickness="0" FontFamily="Cascadia Code, Consolas" FontSize="10" Padding="0" />
-                        </Border>
-                        <Button Grid.Row="3" Content="Copy diagnostics" Style="{StaticResource ButtonBase}" Click="CopyDiagnostics_Click" Margin="0,12,0,0" />
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <!-- Footer Bar -->
-            <Grid x:Name="Footer" Grid.Row="2" Margin="16,0,12,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Border Grid.ColumnSpan="2" BorderBrush="{StaticResource BorderSubtle}" BorderThickness="0,1,0,0" VerticalAlignment="Top" />
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Ellipse x:Name="LiveDot" Width="6" Height="6" Fill="{StaticResource AccentEmerald}" Margin="0,0,8,0" />
-                    <TextBlock x:Name="StatusDetail" Text="Same network. No cables." Foreground="{StaticResource TextSecondary}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="360" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="StopVideoButton" Content="Stop mirroring" Visibility="Collapsed" Style="{StaticResource ToolButton}" Margin="0,0,6,0" Click="StopVideo_Click" />
-                    <Button x:Name="FullscreenButton" Visibility="Collapsed" Style="{StaticResource ToolButton}" Margin="0,0,4,0" Click="Fullscreen_Click" ToolTip="Full screen (F11)" AutomationProperties.Name="Full screen">
-                        <Path Data="M 0,4 V 0 H 4 M 8,0 H 12 V 4 M 12,8 V 12 H 8 M 4,12 H 0 V 8" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2" />
-                    </Button>
-                    <Button x:Name="PinButton" Style="{StaticResource ToolButton}" Margin="0,0,4,0" Click="Pin_Click" ToolTip="Keep on top" AutomationProperties.Name="Keep on top">
-                        <Path Data="M 3,0 H 9 L 8,5 L 11,8 H 1 L 4,5 Z M 6,8 V 13" Stroke="{StaticResource TextSecondary}" StrokeThickness="1.2" />
-                    </Button>
-                    <Button Style="{StaticResource ToolButton}" Content="Details" Click="Details_Click" AutomationProperties.Name="Session details" />
-                </StackPanel>
-            </Grid>
+            </Border>
         </Grid>
+
+        <!-- Compact Bottom Activity & Transport Bar -->
+        <Grid x:Name="Footer" Grid.Row="2" Margin="16,0,12,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" VerticalAlignment="Top" />
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Ellipse x:Name="LiveDot" Width="6" Height="6" Fill="{DynamicResource AcousticOfflineBrush}" Visibility="Collapsed" Margin="0,0,8,0" VerticalAlignment="Center" />
+                <TextBlock x:Name="StatusDetail"
+                           Text="Same network. No cables."
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           FontSize="12"
+                           Typography.NumeralAlignment="Tabular"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <ui:Button x:Name="StopVideoButton"
+                           Content="Stop mirroring"
+                           Appearance="Danger"
+                           Background="{DynamicResource AcousticDangerBrush}"
+                           MouseOverBackground="{DynamicResource AcousticDangerHoverBrush}"
+                           PressedBackground="{DynamicResource AcousticDangerPressedBrush}"
+                           BorderBrush="{DynamicResource AcousticDangerBorderBrush}"
+                           MouseOverBorderBrush="{DynamicResource AcousticDangerBorderBrush}"
+                           Foreground="#FFFFFF"
+                           Padding="12,5"
+                           FontSize="12"
+                           Visibility="Collapsed"
+                           Margin="0,0,6,0"
+                           Icon="{ui:SymbolIcon DismissCircle24}"
+                           Click="StopVideo_Click" />
+                <ui:Button x:Name="FullscreenButton"
+                           Visibility="Collapsed"
+                           Appearance="Transparent"
+                           Padding="8,5"
+                           Margin="0,0,4,0"
+                           Click="Fullscreen_Click"
+                           ToolTip="Full screen (F11)"
+                           AutomationProperties.Name="Full screen">
+                    <ui:SymbolIcon Symbol="FullScreenMaximize24" FontSize="15" />
+                </ui:Button>
+                <ui:Button x:Name="DetailsButton"
+                           Appearance="Transparent"
+                           Padding="10,5"
+                           FontSize="12"
+                           Content="Details"
+                           Icon="{ui:SymbolIcon Pulse24}"
+                           Click="Details_Click"
+                           AutomationProperties.Name="Session details" />
+            </StackPanel>
+        </Grid>
+    </Grid>
     </Border>
 </Window>

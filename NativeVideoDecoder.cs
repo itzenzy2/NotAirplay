@@ -11,22 +11,23 @@ internal sealed class NativeVideoDecoder : IDisposable
     private readonly Action<bool> started;
     private readonly Action<string> report;
 
-    public NativeVideoDecoder(nint target, VideoStatistics statistics, Action<bool> started, Action<string> report, bool hardware = true)
+    public NativeVideoDecoder(nint target, VideoStatistics statistics, Action<bool> started, Action<string> report, bool hardware = true, int targetFps = 60)
     {
         this.statistics = statistics;
         this.started = started;
         this.report = report;
-        int result = Create(target, hardware ? 1 : 0, out handle);
+        uint fps = (uint)AppSettings.NormalizeFps(targetFps);
+        int result = CreateWithFps(target, hardware ? 1 : 0, fps, out handle);
         if (result < 0)
-            result = Create(target, 0, out handle);
+            result = CreateWithFps(target, 0, fps, out handle);
         Check(result);
     }
 
-    public unsafe void Write(ReadOnlySpan<byte> bytes)
+    public unsafe void Write(ReadOnlySpan<byte> bytes, ulong timestampUs = 0)
     {
         fixed (byte* pointer = bytes)
         {
-            Check(Push(handle, pointer, (uint)bytes.Length, out var info));
+            Check(PushTimed(handle, pointer, (uint)bytes.Length, timestampUs, out var info));
             Update(info);
         }
     }
@@ -62,10 +63,10 @@ internal sealed class NativeVideoDecoder : IDisposable
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeInfo { public uint Width, Height, Frames, Hardware, Presented, Skipped; }
-    [DllImport("notairplay-video.dll", EntryPoint = "na_video_create", CallingConvention = CallingConvention.Cdecl)]
-    private static extern int Create(nint target, int hardware, out nint result);
-    [DllImport("notairplay-video.dll", EntryPoint = "na_video_push", CallingConvention = CallingConvention.Cdecl)]
-    private static extern unsafe int Push(nint handle, byte* bytes, uint length, out NativeInfo info);
+    [DllImport("notairplay-video.dll", EntryPoint = "na_video_create_with_fps", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int CreateWithFps(nint target, int hardware, uint targetFps, out nint result);
+    [DllImport("notairplay-video.dll", EntryPoint = "na_video_push_timed", CallingConvention = CallingConvention.Cdecl)]
+    private static extern unsafe int PushTimed(nint handle, byte* bytes, uint length, ulong timestampUs, out NativeInfo info);
     [DllImport("notairplay-video.dll", EntryPoint = "na_video_finish", CallingConvention = CallingConvention.Cdecl)]
     private static extern int Drain(nint handle, out NativeInfo info);
     [DllImport("notairplay-video.dll", EntryPoint = "na_video_destroy", CallingConvention = CallingConvention.Cdecl)]

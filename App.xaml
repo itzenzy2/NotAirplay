@@ -1,4 +1,27 @@
 <Application x:Class="NotAirplay.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml" />
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemesDictionary Theme="Dark" />
+                <ui:ControlsDictionary />
+            </ResourceDictionary.MergedDictionaries>
+            <SolidColorBrush x:Key="AcousticLiveBrush" Color="#10B981" />
+            <SolidColorBrush x:Key="AcousticLiveTextBrush" Color="#34D399" />
+            <SolidColorBrush x:Key="AcousticLiveSubtleBrush" Color="#1A10B981" />
+            <SolidColorBrush x:Key="AcousticLiveBorderBrush" Color="#4D10B981" />
+            <SolidColorBrush x:Key="AcousticWaveCyanBrush" Color="#38BDF8" />
+            <SolidColorBrush x:Key="AcousticWarningBrush" Color="#F59E0B" />
+            <SolidColorBrush x:Key="AcousticWarningTextBrush" Color="#FBBF24" />
+            <SolidColorBrush x:Key="AcousticDangerBrush" Color="#B91C1C" />
+            <SolidColorBrush x:Key="AcousticDangerHoverBrush" Color="#991B1B" />
+            <SolidColorBrush x:Key="AcousticDangerPressedBrush" Color="#7F1D1D" />
+            <SolidColorBrush x:Key="AcousticDangerBorderBrush" Color="#DC2626" />
+            <SolidColorBrush x:Key="AcousticOfflineBrush" Color="#71717A" />
+            <SolidColorBrush x:Key="AcousticStageFallbackBrush" Color="#202020" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

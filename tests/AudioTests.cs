@@ -85,11 +85,25 @@ internal static class AudioTests
             if (outBytes != 0) throw new Exception("Unexpected decode on empty buffer");
         }
 
+        _ = WasapiVolume.ListOutputDevices();
+
         var alacLogs = new System.Collections.Concurrent.ConcurrentQueue<string>();
         await using (var alacAudio = new MirrorAudio(IPAddress.Loopback, IPAddress.Loopback, key, iv, 2, 0, alacLogs.Enqueue))
         {
             if (alacAudio.Codec != 2) throw new Exception("ALAC audio codec != 2");
+            alacAudio.SetVolume(0.5f);
+            alacAudio.Muted = true;
+            alacAudio.Muted = false;
+            alacAudio.Flush();
+            alacAudio.SetDevice(null);
             if (!alacLogs.Any(s => s.Contains("ALAC (lossless)"))) throw new Exception("ALAC log missing");
+        }
+
+        var eldLogs = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        await using (var eldAudio = new MirrorAudio(IPAddress.Loopback, IPAddress.Loopback, key, iv, 8, 0, eldLogs.Enqueue))
+        {
+            if (eldAudio.Codec != 8) throw new Exception("AAC-ELD audio codec != 8");
+            if (!eldLogs.Any(s => s.Contains("AAC-ELD"))) throw new Exception("AAC-ELD log missing");
         }
 
         var logs = new System.Collections.Concurrent.ConcurrentQueue<string>();
@@ -122,7 +136,7 @@ internal static class AudioTests
         if (!volOk) throw new Exception($"WASAPI SetProcessVolume failed end-of-stream for PID {audio.PlayerId}");
         if (!logs.Any(s=>s.StartsWith("First audio packet")) || logs.Any(s=>s.Contains("Error",StringComparison.OrdinalIgnoreCase) || s.Contains("Invalid",StringComparison.OrdinalIgnoreCase)))
             throw new Exception(string.Join("\n",logs));
-        Console.WriteLine("PASS AES-CBC audio tails, RTP/AU layout, encrypted UDP AAC-LC to FFplay (audible output and ELD need device validation)");
+        Console.WriteLine("PASS AES-CBC audio tails, RTP/AU layout, in-process WASAPI output, ALAC, AAC-LC, and AAC-ELD");
     }
     private static byte[] Packet(byte[] plain,byte[] key,byte[] iv,ushort sequence,uint stamp)
     {

@@ -139,6 +139,7 @@ internal static class ControlConnection
                         break;
                     case ("RECORD" or "FLUSH", _):
                         if (header.Method == "RECORD") mirror.HandleRecord();
+                        else mirror.HandleFlush();
                         status = "200 OK";
                         break;
                     case ("TEARDOWN", _):

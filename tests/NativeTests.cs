@@ -11,6 +11,7 @@ internal static class NativeTests
 
     public static void Run(string path)
     {
+        TestHeaderTimestamps();
         var portrait = AccessUnits(File.ReadAllBytes(Path.Combine(path, "benchmark.h264")));
         var landscape = AccessUnits(File.ReadAllBytes(Path.Combine(path, "landscape.h264")));
         nint hwnd = CreateWindowEx(0, "static", "", unchecked((int)0x80000000), 0, 0, 500, 1080, 0, 0, 0, 0);
@@ -30,7 +31,7 @@ internal static class NativeTests
                         double remaining = i * 1000.0 / 60 - watch.Elapsed.TotalMilliseconds;
                         if (remaining > 0) Thread.Sleep(TimeSpan.FromMilliseconds(remaining));
                     }
-                    decoder.Write(portrait[i]);
+                    decoder.Write(portrait[i], (ulong)i * 16667UL + 1_000_000UL);
                     if (stats.Decoded > 0 && firstAt == 0) firstAt = i + 1;
                 }
                 if (firstAt is 0 or > 3) throw new Exception($"Decoder buffered {firstAt} inputs before first output");
@@ -48,6 +49,20 @@ internal static class NativeTests
         }
         finally { DestroyWindow(hwnd); }
         BenchmarkPreview4(portrait).GetAwaiter().GetResult();
+    }
+
+    private static void TestHeaderTimestamps()
+    {
+        var empty = new byte[128];
+        if (MirrorSession.ReadHeaderTimestampUs(empty) != 0)
+            throw new Exception("Expected zero timestamp for zeroed fixture header.");
+        var packet = new byte[128];
+        ulong ntp = (100UL << 32) | 0x80000000UL;
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt64LittleEndian(packet.AsSpan(8, 8), ntp);
+        ulong us = MirrorSession.ReadHeaderTimestampUs(packet);
+        if (us != 100_500_000UL)
+            throw new Exception($"Unexpected NTP timestamp conversion: {us}");
+        Console.WriteLine("PASS AirPlay header NTP timestamp extraction");
     }
 
     private static List<byte[]> AccessUnits(byte[] source)

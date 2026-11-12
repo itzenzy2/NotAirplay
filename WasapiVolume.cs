@@ -1,9 +1,37 @@
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace NotAirplay;
 
+internal sealed record AudioDeviceInfo(string Id, string Name);
+
 internal static class WasapiVolume
 {
+    public static IReadOnlyList<AudioDeviceInfo> ListOutputDevices()
+    {
+        var devices = new List<AudioDeviceInfo>();
+        try
+        {
+            byte[] buffer = new byte[16384];
+            int len = EnumDevices(buffer, buffer.Length);
+            if (len > 0)
+            {
+                string raw = Encoding.UTF8.GetString(buffer, 0, len);
+                foreach (string line in raw.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    int sep = line.IndexOf('\t');
+                    if (sep > 0 && sep + 1 < line.Length)
+                        devices.Add(new AudioDeviceInfo(line[..sep], line[(sep + 1)..]));
+                }
+            }
+        }
+        catch { }
+        return devices;
+    }
+
+    [DllImport("notairplay-video.dll", EntryPoint = "na_audio_enum_devices", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int EnumDevices([Out] byte[] utf8Out, int maxBytes);
+
     public static bool SetProcessVolume(int processId, float volume)
     {
         try

@@ -17,10 +17,13 @@ internal sealed class ReceiverProbe : IAsyncDisposable
     private readonly Action<VideoFrame> present;
     private readonly VideoTarget? target;
     private readonly Action<MirrorUpdate>? changed;
+    private readonly Func<string?>? getAudioDeviceId;
     private readonly List<DiscoveryRegistration> nativeDiscovery = new(2);
     private MulticastDiscovery? multicast;
     private Task accepting = Task.CompletedTask;
     private readonly ConcurrentDictionary<MirrorSession, byte> sessions = new();
+
+    public string AdvertisedName => identity.Name;
 
     public void StopMirroring()
     {
@@ -40,12 +43,19 @@ internal sealed class ReceiverProbe : IAsyncDisposable
         foreach (var session in sessions.Keys) session.SetVolume(volume);
     }
 
-    private ReceiverProbe(Action<string> report, Action<VideoFrame> present, VideoTarget? target, Action<MirrorUpdate>? changed)
+    public void SetAudioDevice(string? deviceId)
+    {
+        foreach (var session in sessions.Keys) session.SetAudioDevice(deviceId);
+    }
+
+    private ReceiverProbe(Action<string> report, Action<VideoFrame> present, VideoTarget? target,
+        Action<MirrorUpdate>? changed, Func<int>? maxFps, string? serviceName, Func<string?>? getAudioDeviceId)
     {
         this.report = report;
         this.present = present;
         this.target = target;
-        identity = new ReceiverIdentity();
+        this.getAudioDeviceId = getAudioDeviceId;
+        identity = new ReceiverIdentity(null, maxFps, serviceName);
         this.changed = changed;
     }
 
@@ -53,9 +63,10 @@ internal sealed class ReceiverProbe : IAsyncDisposable
     public string DiscoverySummary => multicast?.Summary ?? "Windows DNS-SD registered both services. Packet counters unavailable.";
 
     public static async Task<ReceiverProbe> StartAsync(Action<string> report, Action<VideoFrame>? present = null,
-        VideoTarget? target = null, Action<MirrorUpdate>? changed = null)
+        VideoTarget? target = null, Action<MirrorUpdate>? changed = null, Func<int>? maxFps = null,
+        string? serviceName = null, Func<string?>? getAudioDeviceId = null)
     {
-        var probe = new ReceiverProbe(report, present ?? (frame => frame.Dispose()), target, changed);
+        var probe = new ReceiverProbe(report, present ?? (frame => frame.Dispose()), target, changed, maxFps, serviceName, getAudioDeviceId);
         try
         {
             probe.listener.Server.DualMode = true;
@@ -147,7 +158,7 @@ internal sealed class ReceiverProbe : IAsyncDisposable
                 var local = ((IPEndPoint)client.Client.LocalEndPoint!).Address;
                 var remote = ((IPEndPoint)client.Client.RemoteEndPoint!).Address;
                 await using var mirror = new MirrorSession(local.IsIPv4MappedToIPv6 ? local.MapToIPv4() : local,
-                    remote.IsIPv4MappedToIPv6 ? remote.MapToIPv4() : remote, activeMirror, present, report, target, changed);
+                    remote.IsIPv4MappedToIPv6 ? remote.MapToIPv4() : remote, activeMirror, present, report, target, changed, getAudioDeviceId);
                 mirror.VolumeChanged += v => VolumeChanged?.Invoke(v);
                 mirror.TrackChanged += t => TrackChanged?.Invoke(t);
                 try

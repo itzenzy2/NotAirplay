@@ -16,17 +16,48 @@ internal sealed class ReceiverIdentity
     private const uint ExtendedFeatures = 0x400;
     private const uint StatusFlags = 0x4;
 
-    public string Name => ServiceName;
+    public string Name { get; }
     public string HostName { get; }
     public DiscoveryService AirPlay { get; }
     public DiscoveryService Raop { get; }
     public byte[] Info => BinaryPropertyList.Write(CreateInfoFields());
     private readonly Func<int> displayHeight;
+    private readonly Func<int> maxFps;
     public byte[] ServerInfo { get; }
 
-    public ReceiverIdentity(Func<int>? displayHeight = null)
+    public static string SanitizeName(string? customName)
     {
+        if (string.IsNullOrWhiteSpace(customName)) return ServiceName;
+        var builder = new StringBuilder(customName.Length);
+        bool prevSpace = false;
+        foreach (char ch in customName.Trim())
+        {
+            if (char.IsControl(ch)) continue;
+            char mapped = ch == '.' ? ' ' : ch;
+            if (char.IsWhiteSpace(mapped))
+            {
+                if (!prevSpace && builder.Length > 0) builder.Append(' ');
+                prevSpace = true;
+            }
+            else
+            {
+                builder.Append(mapped);
+                prevSpace = false;
+            }
+        }
+        string normalized = builder.ToString().Trim();
+        if (normalized.Length == 0) return ServiceName;
+        // DNS label limit is 63 bytes and RAOP prefixes "<12-hex>@", leaving 50 bytes max.
+        while (Encoding.UTF8.GetByteCount(normalized) > 48 && normalized.Length > 0)
+            normalized = normalized[..^1].TrimEnd();
+        return normalized.Length == 0 ? ServiceName : normalized;
+    }
+
+    public ReceiverIdentity(Func<int>? displayHeight = null, Func<int>? maxFps = null, string? serviceName = null)
+    {
+        Name = SanitizeName(serviceName);
         this.displayHeight = displayHeight ?? (() => 1080);
+        this.maxFps = maxFps ?? (() => 60);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"NotAirplay/{Environment.MachineName}"));
         hash[0] = (byte)((hash[0] & 0xfc) | 0x02);
         var deviceIdBytes = hash.AsSpan(0, 6);
@@ -74,38 +105,42 @@ internal sealed class ReceiverIdentity
         ServerInfo = Encoding.UTF8.GetBytes(plist.ToString(SaveOptions.DisableFormatting));
     }
 
-    public Dictionary<string, object> CreateInfoFields() => new()
+    public Dictionary<string, object> CreateInfoFields()
     {
-        ["deviceID"] = AirPlay.Properties["deviceid"],
-        ["macAddress"] = AirPlay.Properties["deviceid"],
-        ["features"] = ((ulong)ExtendedFeatures << 32) | LegacyFeatures,
-        ["model"] = Model,
-        ["name"] = Name,
-        ["protocolVersion"] = ProtocolVersion,
-        ["sourceVersion"] = SourceVersion,
-        ["statusFlags"] = (ulong)StatusFlags,
-        ["pi"] = AirPlay.Properties["pi"],
-        ["vv"] = 2UL,
-        ["keepAliveLowPower"] = true,
-        ["txtAirPlay"] = AirPlay.EncodeTxt(),
-        ["displays"] = new object[]
+        int fps = AppSettings.NormalizeFps(maxFps());
+        return new()
         {
-            new Dictionary<string, object>
+            ["deviceID"] = AirPlay.Properties["deviceid"],
+            ["macAddress"] = AirPlay.Properties["deviceid"],
+            ["features"] = ((ulong)ExtendedFeatures << 32) | LegacyFeatures,
+            ["model"] = Model,
+            ["name"] = Name,
+            ["protocolVersion"] = ProtocolVersion,
+            ["sourceVersion"] = SourceVersion,
+            ["statusFlags"] = (ulong)StatusFlags,
+            ["pi"] = AirPlay.Properties["pi"],
+            ["vv"] = 2UL,
+            ["keepAliveLowPower"] = true,
+            ["txtAirPlay"] = AirPlay.EncodeTxt(),
+            ["displays"] = new object[]
             {
-                ["uuid"] = AirPlay.Properties["pi"],
-                ["widthPhysical"] = 0UL,
-                ["heightPhysical"] = 0UL,
-                ["width"] = (ulong)(displayHeight() * 16 / 9),
-                ["height"] = (ulong)displayHeight(),
-                ["widthPixels"] = (ulong)(displayHeight() * 16 / 9),
-                ["heightPixels"] = (ulong)displayHeight(),
-                ["rotation"] = false,
-                ["overscanned"] = false,
-                ["maxFPS"] = 60UL,
-                ["features"] = 14UL,
+                new Dictionary<string, object>
+                {
+                    ["uuid"] = AirPlay.Properties["pi"],
+                    ["widthPhysical"] = 0UL,
+                    ["heightPhysical"] = 0UL,
+                    ["width"] = (ulong)(displayHeight() * 16 / 9),
+                    ["height"] = (ulong)displayHeight(),
+                    ["widthPixels"] = (ulong)(displayHeight() * 16 / 9),
+                    ["heightPixels"] = (ulong)displayHeight(),
+                    ["rotation"] = false,
+                    ["overscanned"] = false,
+                    ["maxFPS"] = (ulong)fps,
+                    ["features"] = 14UL,
+                },
             },
-        },
-    };
+        };
+    }
 }
 
 internal sealed record DiscoveryService(string Name, string Type, IReadOnlyDictionary<string, string> Properties)

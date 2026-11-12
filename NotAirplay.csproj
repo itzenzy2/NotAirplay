@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <Version>0.14.0</Version>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -9,6 +10,9 @@
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationIcon>assets\app.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
   <ItemGroup>
     <Resource Include="assets\app.ico" />
     <Resource Include="assets\logo.png" />

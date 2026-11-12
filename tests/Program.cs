@@ -275,6 +275,7 @@ internal static class Smoke
 
     private static void RenderWindow(string path, int width, int height)
     {
+        MainWindow.UseSavedSettings = false;
         var window = new MainWindow();
         var root = (FrameworkElement)window.Content;
         var size = new Size(width, height);

@@ -13,7 +13,7 @@ namespace NotAirplay;
 
 internal sealed class MirrorSession(IPAddress local, IPAddress remote, SemaphoreSlim activeMirror,
     Action<VideoFrame> present, Action<string> report, VideoTarget? target = null,
-    Action<MirrorUpdate>? changed = null) : IAsyncDisposable
+    Action<MirrorUpdate>? changed = null, Func<string?>? getAudioDeviceId = null) : IAsyncDisposable
 {
     private readonly Guid sessionId = Guid.NewGuid();
     private readonly VideoStatistics statistics = new();
@@ -49,6 +49,10 @@ internal sealed class MirrorSession(IPAddress local, IPAddress remote, Semaphore
         audio?.SetVolume(volume);
         volumeDb = volume <= 0.0001f ? -144.0f : (volume * 30.0f) - 30.0f;
     }
+
+    public void SetAudioDevice(string? deviceId) => audio?.SetDevice(deviceId);
+
+    public void HandleFlush() => audio?.Flush();
 
     public void HandleSetParameter(byte[] body)
     {
@@ -306,7 +310,7 @@ internal sealed class MirrorSession(IPAddress local, IPAddress remote, Semaphore
                     throw new InvalidDataException("Audio codec changed; stop audio before changing its format.");
                 if (audio is null)
                 {
-                    audio = new MirrorAudio(local, remote, mediaKey, audioIv ?? [], codec, (int)remotePort, report);
+                    audio = new MirrorAudio(local, remote, mediaKey, audioIv ?? [], codec, (int)remotePort, report, getAudioDeviceId?.Invoke());
                     if (isMuted) audio.Muted = true;
                     float linear = volumeDb <= -144.0f || volumeDb <= -30.0f ? 0f : Math.Clamp((volumeDb + 30.0f) / 30.0f, 0f, 1f);
                     audio.SetVolume(linear);
@@ -445,7 +449,7 @@ internal sealed class MirrorSession(IPAddress local, IPAddress remote, Semaphore
                             {
                                 try
                                 {
-                                    native = new NativeVideoDecoder(target!.Handle, statistics, Started, report);
+                                    native = new NativeVideoDecoder(target!.Handle, statistics, Started, report, targetFps: target.TargetFps);
                                     native.Write(announced.ParameterSets);
                                 }
                                 catch (Exception ex) when (ex is InvalidOperationException or DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
@@ -461,6 +465,7 @@ internal sealed class MirrorSession(IPAddress local, IPAddress remote, Semaphore
                     }
                     else if (header[4] == 0)
                     {
+                        ulong senderTsUs = ReadHeaderTimestampUs(header);
                         statistics.Packet(size);
                         long started = Stopwatch.GetTimestamp();
                         cipher.Transform(payload.Span);
@@ -469,7 +474,7 @@ internal sealed class MirrorSession(IPAddress local, IPAddress remote, Semaphore
                             var packet = format.ToAnnexB(payload);
                             if (native is not null)
                             {
-                                try { native.Write(packet.Span); }
+                                try { native.Write(packet.Span, senderTsUs); }
                                 catch (InvalidOperationException ex)
                                 {
                                     native.Dispose(); native = null; nativeUnavailable = true; streaming = false;
@@ -494,6 +499,16 @@ internal sealed class MirrorSession(IPAddress local, IPAddress remote, Semaphore
             if (decoder is not null)
                 await decoder.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    internal static ulong ReadHeaderTimestampUs(ReadOnlySpan<byte> header)
+    {
+        if (header.Length < 16) return 0;
+        ulong rawNtp = BinaryPrimitives.ReadUInt64LittleEndian(header.Slice(8, 8));
+        if (rawNtp == 0) return 0;
+        ulong seconds = rawNtp >> 32;
+        ulong fraction = rawNtp & 0xFFFFFFFFUL;
+        return (seconds * 1_000_000UL) + ((fraction * 1_000_000UL) >> 32);
     }
 
     public async ValueTask DisposeAsync()

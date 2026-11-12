@@ -10,24 +10,60 @@
 #include <codecapi.h>
 #include <d3d11.h>
 #include <d3d10.h>
-#include <dxgi1_2.h>
+#include <dxgi1_3.h>
 #include <wrl/client.h>
 #include <algorithm>
+#include <chrono>
+#include <cstdint>
 #include <memory>
 #include <cstring>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <deque>
+#include <vector>
 #include "alac.h"
 using Microsoft::WRL::ComPtr;
+
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+#define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
 
 struct VideoInfo { unsigned width, height, frames, hardware, presented, skipped; };
 static void check(HRESULT hr) { if (FAILED(hr)) throw hr; }
 
+static uint64_t nowMicros() noexcept {
+    static LARGE_INTEGER freq = [] { LARGE_INTEGER f = {}; QueryPerformanceFrequency(&f); return f; }();
+    LARGE_INTEGER counter = {};
+    QueryPerformanceCounter(&counter);
+    return static_cast<uint64_t>((counter.QuadPart * 1000000LL) / freq.QuadPart);
+}
+
+struct MultimediaGuard {
+    HMODULE winmm = nullptr;
+    UINT periodMs = 0;
+    using TimePeriodFn = UINT(WINAPI*)(UINT);
+    void acquire() noexcept {
+        if (periodMs) return;
+        winmm = LoadLibraryW(L"winmm.dll");
+        if (!winmm) return;
+        auto beginFn = reinterpret_cast<TimePeriodFn>(reinterpret_cast<void*>(GetProcAddress(winmm, "timeBeginPeriod")));
+        if (beginFn && beginFn(1) == 0) periodMs = 1;
+    }
+    void release() noexcept {
+        if (winmm && periodMs) {
+            auto endFn = reinterpret_cast<TimePeriodFn>(reinterpret_cast<void*>(GetProcAddress(winmm, "timeEndPeriod")));
+            if (endFn) endFn(periodMs);
+            periodMs = 0;
+        }
+        if (winmm) { FreeLibrary(winmm); winmm = nullptr; }
+    }
+};
+
 class Video {
     HWND window;
     bool mfStarted = false;
+    MultimediaGuard mmTimer;
     ComPtr<ID3D11Device> device;
     ComPtr<ID3D11DeviceContext> context;
     ComPtr<ID3D11VideoDevice> videoDevice;
@@ -35,9 +71,23 @@ class Video {
     ComPtr<IMFDXGIDeviceManager> manager;
     ComPtr<IMFTransform> decoder;
     ComPtr<IDXGISwapChain1> chain;
+    ComPtr<IDXGISwapChain2> chain2;
     ComPtr<ID3D11VideoProcessorEnumerator> enumerator;
     ComPtr<ID3D11VideoProcessor> processor;
     ComPtr<ID3D11Texture2D> upload;
+    struct OutputViewEntry {
+        ID3D11Texture2D* key = nullptr;
+        ComPtr<ID3D11Texture2D> texture;
+        ComPtr<ID3D11VideoProcessorOutputView> view;
+    };
+    std::vector<OutputViewEntry> outputViews;
+    HANDLE waitable = nullptr;
+    HANDLE stopEvent = nullptr;
+    HANDLE catchupEvent = nullptr;
+    HANDLE waitTimer = nullptr;
+    UINT swapFlags = 0;
+    bool lastOccluded = false;
+    unsigned targetFps = 60;
     unsigned outputWidth = 0, outputHeight = 0, inputWidth = 0, inputHeight = 0;
     unsigned codedWidth = 0, codedHeight = 0;
     LONG stride = 0;
@@ -47,6 +97,7 @@ class Video {
     LONGLONG clock = 0;
     struct Frame {
         ComPtr<IMFSample> sample;
+        uint64_t senderTsUs;
         unsigned width, height, codedWidth, codedHeight;
         LONG stride; RECT crop; UINT32 matrix, range;
     };
@@ -56,20 +107,40 @@ class Video {
     std::thread presenter;
     bool stopping = false, rendering = false;
     HRESULT presentationError = S_OK;
+
+    bool pacingInit = false;
+    uint64_t lastSenderUs = 0;
+    int64_t clockOffsetUs = 0;
+    double jitterUs = 0.0;
 public:
     VideoInfo info = {};
+    static unsigned normalizeFps(unsigned fps) noexcept {
+        return (fps == 30 || fps == 120) ? fps : 60u;
+    }
     VideoInfo snapshot() { std::lock_guard<std::mutex> lock(gate); check(presentationError); return info; }
-    Video(HWND target, bool hardware) : window(target) {
+    Video(HWND target, bool hardware, unsigned fps = 60) : window(target), targetFps(normalizeFps(fps)) {
         check(MFStartup(MF_VERSION, MFSTARTUP_LITE)); mfStarted = true;
+        stopEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        catchupEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+        waitTimer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+        if (!waitTimer) waitTimer = CreateWaitableTimerExW(nullptr, nullptr, 0, TIMER_ALL_ACCESS);
+        mmTimer.acquire();
         try { initialize(hardware); } catch (...) { shutdown(); throw; }
     }
     ~Video() { shutdown(); }
     void shutdown() {
         { std::lock_guard<std::mutex> lock(gate); stopping = true; frames.clear(); }
+        if (stopEvent) SetEvent(stopEvent);
         ready.notify_all();
         if (presenter.joinable()) presenter.join();
         if (decoder) { decoder->ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0); decoder.Reset(); }
-        manager.Reset(); processor.Reset(); enumerator.Reset(); upload.Reset(); chain.Reset();
+        outputViews.clear();
+        manager.Reset(); processor.Reset(); enumerator.Reset(); upload.Reset(); chain2.Reset(); chain.Reset();
+        if (waitable) { CloseHandle(waitable); waitable = nullptr; }
+        if (waitTimer) { CloseHandle(waitTimer); waitTimer = nullptr; }
+        if (catchupEvent) { CloseHandle(catchupEvent); catchupEvent = nullptr; }
+        if (stopEvent) { CloseHandle(stopEvent); stopEvent = nullptr; }
+        mmTimer.release();
         videoContext.Reset(); videoDevice.Reset(); context.Reset(); device.Reset();
         if (mfStarted) { MFShutdown(); mfStarted = false; }
     }
@@ -105,22 +176,44 @@ public:
         check(decoder->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0));
         presenter = std::thread([this] {
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+            HMODULE avrt = LoadLibraryW(L"avrt.dll");
+            HANDLE mmcss = nullptr;
+            if (avrt) {
+                using AvSetFn = HANDLE(WINAPI*)(LPCWSTR, LPDWORD);
+                auto setFn = reinterpret_cast<AvSetFn>(reinterpret_cast<void*>(GetProcAddress(avrt, "AvSetMmThreadCharacteristicsW")));
+                DWORD taskIndex = 0;
+                if (setFn) mmcss = setFn(L"Games", &taskIndex);
+            }
             HRESULT apartment = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
             for (;;) {
                 Frame frame;
+                size_t remaining = 0;
                 {
                     std::unique_lock<std::mutex> lock(gate);
                     ready.wait(lock, [this] { return stopping || !frames.empty(); });
                     if (stopping) break;
-                    frame = std::move(frames.front()); frames.pop_front(); rendering = true;
+                    frame = std::move(frames.front()); frames.pop_front();
+                    remaining = frames.size();
+                    rendering = true;
                 }
-                try { render(frame); }
+                try {
+                    paceFrame(frame.senderTsUs, remaining);
+                    if (!stopping) render(frame);
+                }
                 catch (HRESULT error) { std::lock_guard<std::mutex> lock(gate); presentationError = error; }
                 catch (...) { std::lock_guard<std::mutex> lock(gate); presentationError = E_UNEXPECTED; }
                 { std::lock_guard<std::mutex> lock(gate); rendering = false; }
                 ready.notify_all();
             }
             if (SUCCEEDED(apartment)) CoUninitialize();
+            if (avrt) {
+                if (mmcss) {
+                    using AvRevertFn = BOOL(WINAPI*)(HANDLE);
+                    auto revertFn = reinterpret_cast<AvRevertFn>(reinterpret_cast<void*>(GetProcAddress(avrt, "AvRevertMmThreadCharacteristics")));
+                    if (revertFn) revertFn(mmcss);
+                }
+                FreeLibrary(avrt);
+            }
         });
     }
     void setOutput() {
@@ -153,7 +246,7 @@ public:
             return;
         }
     }
-    void push(const BYTE* bytes, DWORD length) {
+    void push(const BYTE* bytes, DWORD length, uint64_t senderTsUs = 0) {
         if (!bytes || !length || length > 8 * 1024 * 1024) throw E_INVALIDARG;
         ComPtr<IMFSample> sample; ComPtr<IMFMediaBuffer> buffer;
         check(MFCreateSample(&sample)); check(MFCreateMemoryBuffer(length, &buffer));
@@ -161,18 +254,21 @@ public:
         check(buffer->Lock(&destination, nullptr, nullptr));
         std::memcpy(destination, bytes, length); check(buffer->Unlock());
         check(buffer->SetCurrentLength(length)); check(sample->AddBuffer(buffer.Get()));
-        check(sample->SetSampleTime(clock)); check(sample->SetSampleDuration(166667)); clock += 166667;
+        LONGLONG duration = 10000000LL / static_cast<LONGLONG>(targetFps);
+        check(sample->SetSampleTime(clock)); check(sample->SetSampleDuration(duration)); clock += duration;
         HRESULT result = decoder->ProcessInput(0, sample.Get(), 0);
-        if (result == MF_E_NOTACCEPTING) { drain(); result = decoder->ProcessInput(0, sample.Get(), 0); }
-        check(result); drain();
+        if (result == MF_E_NOTACCEPTING) { drain(0); result = decoder->ProcessInput(0, sample.Get(), 0); }
+        check(result); drain(senderTsUs);
     }
     void finish() {
-        check(decoder->ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0)); drain();
+        check(decoder->ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0)); drain(0);
         std::unique_lock<std::mutex> lock(gate);
         ready.wait(lock, [this] { return frames.empty() && !rendering; });
         check(presentationError);
     }
-    void drain() {
+    void drain(uint64_t senderTsUs) {
+        constexpr size_t kMaxQueue = 3;
+        bool firstOut = true;
         for (unsigned safety = 0; safety < 64; ++safety) {
             MFT_OUTPUT_STREAM_INFO outputInfo = {}; check(decoder->GetOutputStreamInfo(0, &outputInfo));
             ComPtr<IMFSample> ownSample;
@@ -193,20 +289,62 @@ public:
             if (!frame || (output.dwStatus & MFT_OUTPUT_DATA_BUFFER_NO_SAMPLE)) continue;
             ComPtr<IMFMediaBuffer> decodedBuffer; ComPtr<IMFDXGIBuffer> decodedTexture;
             bool hardwareFrame = SUCCEEDED(frame->GetBufferByIndex(0, &decodedBuffer)) && SUCCEEDED(decodedBuffer.As(&decodedTexture));
+            uint64_t ts = firstOut ? senderTsUs : 0;
+            firstOut = false;
+            bool signalCatchup = false;
             {
                 std::lock_guard<std::mutex> lock(gate);
                 check(presentationError);
                 info.hardware = hardwareFrame ? 1 : 0;
                 ++info.frames;
-                // Real-time queue: always keep the newest frame without latency buffer backlog.
-                // Decoded frames render in <1ms on GPU, ensuring zero accumulated latency.
-                if (frames.size() >= 1) { frames.pop_front(); ++info.skipped; }
-                frames.push_back({frame, static_cast<unsigned>(crop.right-crop.left),
+                while (frames.size() >= kMaxQueue) { frames.pop_front(); ++info.skipped; }
+                frames.push_back({frame, ts, static_cast<unsigned>(crop.right-crop.left),
                     static_cast<unsigned>(crop.bottom-crop.top), codedWidth, codedHeight, stride, crop, matrix, nominalRange});
+                signalCatchup = frames.size() >= 2;
             }
+            if (signalCatchup && catchupEvent) SetEvent(catchupEvent);
             ready.notify_all();
         }
         throw E_UNEXPECTED;
+    }
+    void paceFrame(uint64_t senderTsUs, size_t remaining) {
+        if (senderTsUs == 0 || remaining >= 2) return;
+        uint64_t now = nowMicros();
+        if (!pacingInit || senderTsUs <= lastSenderUs || (senderTsUs - lastSenderUs) > 250000ULL) {
+            clockOffsetUs = static_cast<int64_t>(now) - static_cast<int64_t>(senderTsUs);
+            jitterUs = 0.0;
+            lastSenderUs = senderTsUs;
+            pacingInit = true;
+            return; // Zero idle-to-touch delay on the first frame after a pause.
+        }
+        lastSenderUs = senderTsUs;
+        int64_t sampleOffset = static_cast<int64_t>(now) - static_cast<int64_t>(senderTsUs);
+        if (sampleOffset < clockOffsetUs) {
+            clockOffsetUs = sampleOffset;
+        } else {
+            clockOffsetUs += (sampleOffset - clockOffsetUs) / 256;
+        }
+        int64_t lateness = sampleOffset - clockOffsetUs;
+        if (lateness < 0) lateness = 0;
+        if (lateness > 20000) lateness = 20000;
+        jitterUs = std::clamp(jitterUs * 0.90 + static_cast<double>(lateness) * 0.10, 0.0, 14000.0);
+        int64_t margin = static_cast<int64_t>(std::clamp(jitterUs * 1.25, 0.0, 14000.0));
+        int64_t targetUs = static_cast<int64_t>(senderTsUs) + clockOffsetUs + margin;
+        int64_t waitUs = targetUs - static_cast<int64_t>(now);
+        if (waitUs <= 500 || !waitTimer) return;
+        if (waitUs > 20000) waitUs = 20000;
+
+        if (catchupEvent) ResetEvent(catchupEvent);
+        {
+            std::lock_guard<std::mutex> lock(gate);
+            if (stopping || frames.size() >= 2) return;
+        }
+        LARGE_INTEGER due = {};
+        due.QuadPart = -static_cast<LONGLONG>(waitUs * 10);
+        if (SetWaitableTimer(waitTimer, &due, 0, nullptr, nullptr, FALSE)) {
+            HANDLE handles[3] = { stopEvent, catchupEvent, waitTimer };
+            WaitForMultipleObjects(3, handles, FALSE, 25);
+        }
     }
     void render(const Frame& frame) {
         auto sample = frame.sample.Get();
@@ -248,37 +386,62 @@ public:
         w = std::min(w, 8192u); h = std::min(h, 8192u);
         if (!chain) {
             ComPtr<IDXGIDevice1> dxDevice; check(device.As(&dxDevice));
-            check(dxDevice->SetMaximumFrameLatency(1));
             ComPtr<IDXGIAdapter> adapter; check(dxDevice->GetAdapter(&adapter));
             ComPtr<IDXGIFactory2> factory; check(adapter->GetParent(IID_PPV_ARGS(&factory)));
             DXGI_SWAP_CHAIN_DESC1 desc = {}; desc.Width = w; desc.Height = h;
             desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; desc.SampleDesc.Count = 1;
             desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; desc.BufferCount = 3;
             desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-            check(factory->CreateSwapChainForHwnd(device.Get(), window, &desc, nullptr, nullptr, &chain));
+            desc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+            HRESULT hrChain = factory->CreateSwapChainForHwnd(device.Get(), window, &desc, nullptr, nullptr, &chain);
+            if (SUCCEEDED(hrChain)) {
+                swapFlags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+                if (SUCCEEDED(chain.As(&chain2))) {
+                    check(chain2->SetMaximumFrameLatency(1));
+                    waitable = chain2->GetFrameLatencyWaitableObject();
+                }
+            } else {
+                desc.Flags = 0;
+                swapFlags = 0;
+                check(dxDevice->SetMaximumFrameLatency(1));
+                check(factory->CreateSwapChainForHwnd(device.Get(), window, &desc, nullptr, nullptr, &chain));
+            }
             factory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER);
         } else if (w != outputWidth || h != outputHeight) {
+            outputViews.clear();
             context->ClearState(); context->Flush();
-            check(chain->ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, 0));
+            check(chain->ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, swapFlags));
         }
         D3D11_TEXTURE2D_DESC source = {}; texture->GetDesc(&source);
         if (!processor || w != outputWidth || h != outputHeight || inputWidth != source.Width || inputHeight != source.Height) {
+            outputViews.clear();
             processor.Reset(); enumerator.Reset();
             D3D11_VIDEO_PROCESSOR_CONTENT_DESC desc = {};
             desc.InputFrameFormat = D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE;
             desc.InputWidth = source.Width; desc.InputHeight = source.Height;
             desc.OutputWidth = w; desc.OutputHeight = h;
-            desc.InputFrameRate = {60, 1}; desc.OutputFrameRate = {60, 1};
+            desc.InputFrameRate = {targetFps, 1}; desc.OutputFrameRate = {targetFps, 1};
             desc.Usage = D3D11_VIDEO_USAGE_PLAYBACK_NORMAL;
             check(videoDevice->CreateVideoProcessorEnumerator(&desc, &enumerator));
             check(videoDevice->CreateVideoProcessor(enumerator.Get(), 0, &processor));
             inputWidth = source.Width; inputHeight = source.Height;
         }
         outputWidth = w; outputHeight = h;
+        bool visible = IsWindowVisible(window) != FALSE;
+        if (waitable && visible && !lastOccluded && stopEvent) {
+            HANDLE handles[2] = { stopEvent, waitable };
+            if (WaitForMultipleObjects(2, handles, FALSE, 50) == WAIT_OBJECT_0) return;
+        }
         ComPtr<ID3D11Texture2D> back; check(chain->GetBuffer(0, IID_PPV_ARGS(&back)));
-        D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC od = {}; od.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
         ComPtr<ID3D11VideoProcessorOutputView> output;
-        check(videoDevice->CreateVideoProcessorOutputView(back.Get(), enumerator.Get(), &od, &output));
+        for (const auto& entry : outputViews) {
+            if (entry.key == back.Get()) { output = entry.view; break; }
+        }
+        if (!output) {
+            D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC od = {}; od.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
+            check(videoDevice->CreateVideoProcessorOutputView(back.Get(), enumerator.Get(), &od, &output));
+            outputViews.push_back({ back.Get(), back, output });
+        }
         D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC id = {}; id.ViewDimension = D3D11_VPIV_DIMENSION_TEXTURE2D;
         id.Texture2D.ArraySlice = subresource / source.MipLevels; id.Texture2D.MipSlice = subresource % source.MipLevels;
         ComPtr<ID3D11VideoProcessorInputView> input;
@@ -302,16 +465,17 @@ public:
         videoContext->VideoProcessorSetOutputColorSpace(processor.Get(), &outputSpace);
         D3D11_VIDEO_PROCESSOR_STREAM stream = {}; stream.Enable = TRUE; stream.pInputSurface = input.Get();
         check(videoContext->VideoProcessorBlt(processor.Get(), output.Get(), 0, 1, &stream));
-        // Direct flip presentation without VSync thread blocking: DWM handles composition
-        // asynchronously at screen refresh rate while the decode loop runs unhindered.
-        HRESULT result = chain->Present(0, 0);
+        // VSync-locked presentation via Waitable Swap Chain eliminates mid-refresh tearing
+        // and aligns flips cleanly to display refresh without deep buffer bloat.
+        UINT syncInterval = (visible && !lastOccluded) ? 1u : 0u;
+        HRESULT result = chain->Present(syncInterval, 0);
+        lastOccluded = (result == DXGI_STATUS_OCCLUDED);
+        if (lastOccluded && stopEvent) {
+            WaitForSingleObject(stopEvent, 5);
+        }
         std::lock_guard<std::mutex> lock(gate);
         if (result == DXGI_STATUS_OCCLUDED || SUCCEEDED(result)) {
             ++info.presented;
-            if (result == DXGI_STATUS_OCCLUDED) {
-                // If occluded or hidden (e.g. tests or minimized), pace slightly to prevent spinning.
-                std::this_thread::sleep_for(std::chrono::milliseconds(5));
-            }
         } else { check(result); }
     }
 };
@@ -323,16 +487,22 @@ struct Apartment {
     ~Apartment() { if (SUCCEEDED(result)) CoUninitialize(); }
 };
 #define API extern "C" __declspec(dllexport)
-API HRESULT na_video_create(HWND target, int hardware, void** result) noexcept {
+API HRESULT na_video_create_with_fps(HWND target, int hardware, unsigned targetFps, void** result) noexcept {
     if (!result || !IsWindow(target)) return E_INVALIDARG; *result = nullptr;
     Apartment apartment;
-    try { *result = new Video(target, hardware != 0); return S_OK; }
+    try { *result = new Video(target, hardware != 0, targetFps); return S_OK; }
     catch (HRESULT hr) { return hr; } catch (...) { return E_OUTOFMEMORY; }
 }
-API HRESULT na_video_push(void* handle, const BYTE* bytes, DWORD length, VideoInfo* info) noexcept {
+API HRESULT na_video_create(HWND target, int hardware, void** result) noexcept {
+    return na_video_create_with_fps(target, hardware, 60, result);
+}
+API HRESULT na_video_push_timed(void* handle, const BYTE* bytes, DWORD length, uint64_t timestampUs, VideoInfo* info) noexcept {
     if (!handle || !info) return E_INVALIDARG; Apartment apartment;
-    try { auto video = static_cast<Video*>(handle); video->push(bytes, length); *info = video->snapshot(); return S_OK; }
+    try { auto video = static_cast<Video*>(handle); video->push(bytes, length, timestampUs); *info = video->snapshot(); return S_OK; }
     catch (HRESULT hr) { return hr; } catch (...) { return E_UNEXPECTED; }
+}
+API HRESULT na_video_push(void* handle, const BYTE* bytes, DWORD length, VideoInfo* info) noexcept {
+    return na_video_push_timed(handle, bytes, length, 0, info);
 }
 API HRESULT na_video_finish(void* handle, VideoInfo* info) noexcept {
     if (!handle || !info) return E_INVALIDARG; Apartment apartment;

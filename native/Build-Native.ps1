@@ -23,6 +23,6 @@ if ($LASTEXITCODE -ne 0) { throw 'ALAC compilation failed.' }
 
 $ClangCpp = Join-Path (Split-Path $Clang) 'clang++.exe'
 & $ClangCpp --target=x86_64-w64-windows-gnu -std=c++17 -O2 -shared -static -Wall -Wextra `
-(Join-Path $root 'video.cpp') (Join-Path $root 'alac.o') -o (Join-Path $Output 'notairplay-video.dll') `
+(Join-Path $root 'video.cpp') (Join-Path $root 'audio.cpp') (Join-Path $root 'alac.o') -o (Join-Path $Output 'notairplay-video.dll') `
     -lmfplat -lmfuuid -lmf -ld3d11 -ldxgi -lole32 -loleaut32 -luuid -lwmcodecdspuuid
 if ($LASTEXITCODE -ne 0) { throw 'Native video backend compilation failed.' }
